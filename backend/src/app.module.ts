@@ -9,6 +9,7 @@ import { RolesGuard } from './auth/guards/roles.guard.js';
 import { PrismaModule } from './prisma/prisma.module.js';
 import { TicketsModule } from './tickets/tickets.module.js';
 import { UsersModule } from './users/users.module.js';
+import { WebhooksModule } from './webhooks/webhooks.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { UsersModule } from './users/users.module.js';
     AuthModule,
     UsersModule,
     TicketsModule,
+    WebhooksModule,
   ],
   controllers: [AppController],
   providers: [
