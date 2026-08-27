@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,73 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+}
+
+enum UserRole {
+  admin
+  agent
+}
+
+enum TicketStatus {
+  open
+  in_progress
+  resolved
+  closed
+}
+
+enum TicketPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TicketCategory {
+  billing
+  technical
+  account
+  other
+}
+
+enum EnrichmentStatus {
+  pending
+  processing
+  done
+  failed
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         UserRole
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  createdTickets  Ticket[] @relation("TicketCreatedBy")
+  assignedTickets Ticket[] @relation("TicketAssignedTo")
+}
+
+model Ticket {
+  id               Int               @id @default(autoincrement())
+  title            String            @db.VarChar(200)
+  description      String
+  status           TicketStatus      @default(open)
+  createdById      Int
+  createdBy        User              @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedToId     Int?
+  assignedTo       User?             @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  priority         TicketPriority?
+  category         TicketCategory?
+  tags             String[]
+  suggestedReply   String?
+  enrichmentStatus EnrichmentStatus  @default(pending)
+  enrichedAt       DateTime?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+
+  @@index([createdById])
+  @@index([assignedToId])
+  @@index([status])
 }
