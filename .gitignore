@@ -22,6 +22,7 @@ frontend/.vite/
 # Prisma
 backend/prisma/*.db
 backend/prisma/migrations/dev.db*
+backend/src/generated/
 
 # Logs
 *.log
