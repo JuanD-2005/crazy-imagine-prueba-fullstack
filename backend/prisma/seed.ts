@@ -110,6 +110,17 @@ async function main() {
     });
   }
 
+  // El seed inserta ids explícitos vía upsert, lo que no avanza las
+  // secuencias autoincrement de Postgres. Sin este paso, la siguiente
+  // fila creada sin id explícito (p. ej. desde la API) choca con un id
+  // ya usado por el seed y falla con "Unique constraint failed".
+  await prisma.$executeRawUnsafe(
+    `SELECT setval(pg_get_serial_sequence('"User"', 'id'), COALESCE((SELECT MAX(id) FROM "User"), 1))`,
+  );
+  await prisma.$executeRawUnsafe(
+    `SELECT setval(pg_get_serial_sequence('"Ticket"', 'id'), COALESCE((SELECT MAX(id) FROM "Ticket"), 1))`,
+  );
+
   console.log(
     `Seed completo: ${seedData.users.length} usuarios, ${seedData.tickets.length} tickets.`,
   );
