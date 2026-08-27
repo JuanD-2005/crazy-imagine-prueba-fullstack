@@ -1,0 +1,49 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+
+# Environment
+.env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+
+# NestJS build output
+backend/dist/
+backend/build/
+
+# Vite / frontend build output
+frontend/dist/
+frontend/build/
+frontend/.vite/
+
+# Prisma
+backend/prisma/*.db
+backend/prisma/migrations/dev.db*
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing / coverage
+backend/coverage/
+frontend/coverage/
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+Thumbs.db
+
+# n8n local data
+n8n/.n8n/
+
+# Misc
+*.tsbuildinfo
+.eslintcache
