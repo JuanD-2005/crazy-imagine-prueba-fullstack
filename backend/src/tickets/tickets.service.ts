@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service.js';
 import type { AuthenticatedUser } from '../auth/types/authenticated-user.js';
 import { Prisma } from '../generated/prisma/client.js';
+import { N8nNotifierService } from '../webhooks/n8n-notifier.service.js';
 import type { CreateTicketDto } from './dto/create-ticket.dto.js';
 import type { QueryTicketsDto } from './dto/query-tickets.dto.js';
 import type { UpdateTicketDto } from './dto/update-ticket.dto.js';
@@ -24,16 +25,34 @@ import type { UpdateTicketDto } from './dto/update-ticket.dto.js';
  */
 @Injectable()
 export class TicketsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly n8nNotifier: N8nNotifierService,
+  ) {}
 
   async create(user: AuthenticatedUser, dto: CreateTicketDto) {
-    return this.prisma.ticket.create({
+    const ticket = await this.prisma.ticket.create({
       data: {
         title: dto.title,
         description: dto.description,
         createdById: user.userId,
         assignedToId: dto.assignedTo ?? null,
       },
+    });
+
+    const notified = await this.n8nNotifier.notifyTicketCreated({
+      ticketId: ticket.id,
+      title: ticket.title,
+      description: ticket.description,
+    });
+
+    if (!notified) {
+      return ticket;
+    }
+
+    return this.prisma.ticket.update({
+      where: { id: ticket.id },
+      data: { enrichmentStatus: 'processing' },
     });
   }
 

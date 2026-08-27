@@ -1,16 +1,30 @@
+import { HttpService } from '@nestjs/axios';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
+import { of, throwError } from 'rxjs';
 import request from 'supertest';
 import type { App } from 'supertest/types';
+import type { Mock } from 'vitest';
 import { AppModule } from '../src/app.module.js';
 import { AllExceptionsFilter } from '../src/common/filters/all-exceptions.filter.js';
 import { PrismaService } from '../src/prisma/prisma.service.js';
+
+function mockAxiosResponse(status: number) {
+  return of({
+    status,
+    statusText: 'OK',
+    data: {},
+    headers: {},
+    config: {},
+  } as never);
+}
 
 interface TicketBody {
   id: number;
   title: string;
   createdById: number;
   assignedToId: number | null;
+  enrichmentStatus: string;
 }
 
 interface TicketListBody {
@@ -38,13 +52,19 @@ describe('Tickets (e2e)', () => {
   let adminToken: string;
   let brunoToken: string;
   let carlaToken: string;
+  let httpServicePost: Mock;
 
   const createdTicketIds: number[] = [];
 
   beforeAll(async () => {
+    const httpServiceMock = { post: vi.fn(() => mockAxiosResponse(200)) };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(HttpService)
+      .useValue(httpServiceMock)
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(
@@ -54,6 +74,7 @@ describe('Tickets (e2e)', () => {
     await app.init();
 
     prisma = moduleFixture.get(PrismaService);
+    httpServicePost = httpServiceMock.post;
 
     adminToken = await login(app, 'admin@crazysupporthub.test', 'Admin1234!');
     brunoToken = await login(
@@ -77,7 +98,9 @@ describe('Tickets (e2e)', () => {
     await app.close();
   });
 
-  it('POST /tickets with a valid token creates a ticket owned by the caller', async () => {
+  it('POST /tickets with a valid token creates a ticket owned by the caller and notifies n8n', async () => {
+    httpServicePost.mockClear();
+
     const response = await request(app.getHttpServer())
       .post('/tickets')
       .set('Authorization', `Bearer ${brunoToken}`)
@@ -95,7 +118,45 @@ describe('Tickets (e2e)', () => {
       title: 'Ticket de prueba e2e',
       createdById: 2,
       assignedToId: null,
+      // El mock de HttpService responde 2xx por defecto, así que el ticket
+      // debe pasar de "pending" a "processing" tras notificar a n8n.
+      enrichmentStatus: 'processing',
     });
+
+    expect(httpServicePost).toHaveBeenCalledTimes(1);
+    expect(httpServicePost).toHaveBeenCalledWith(
+      process.env.N8N_WEBHOOK_URL,
+      {
+        ticketId: body.id,
+        title: 'Ticket de prueba e2e',
+        description:
+          'Descripción de prueba con longitud suficiente para pasar la validación.',
+      },
+      expect.objectContaining({
+        headers: { 'X-Webhook-Secret': process.env.N8N_WEBHOOK_SECRET },
+        timeout: 5000,
+      }),
+    );
+  });
+
+  it('POST /tickets still returns 201 and stays "pending" when n8n is unreachable', async () => {
+    httpServicePost.mockImplementationOnce(() =>
+      throwError(() => new Error('n8n is down')),
+    );
+
+    const response = await request(app.getHttpServer())
+      .post('/tickets')
+      .set('Authorization', `Bearer ${brunoToken}`)
+      .send({
+        title: 'Ticket con n8n caído',
+        description: 'La creación no debe fallar aunque n8n no responda.',
+      })
+      .expect(201);
+
+    const body = response.body as TicketBody;
+    createdTicketIds.push(body.id);
+
+    expect(body.enrichmentStatus).toBe('pending');
   });
 
   it('POST /tickets without a token returns 401', async () => {
