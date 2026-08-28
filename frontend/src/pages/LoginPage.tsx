@@ -47,6 +47,10 @@ export function LoginPage() {
         onMouseMove={spotlight.onMouseMove}
         style={spotlight.style}
       >
+        <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
+          <LogoMark className="h-[560px] w-[560px] opacity-5" />
+        </div>
+
         <div className="relative z-[2]">
           <div className="mb-16 inline-flex items-center gap-2.5">
             <LogoMark />
@@ -80,8 +84,8 @@ export function LoginPage() {
         <div className="card-border w-[400px] max-w-[90vw]">
           <div className="relative rounded-[19px] border border-white/[0.04] bg-[#08090a] px-9 py-10">
             <div className="mb-7 flex flex-col items-center">
-              <div className="relative mb-4 flex h-[46px] w-[46px] items-center justify-center rounded-xl border border-[var(--line-strong)] bg-[linear-gradient(160deg,#101210,#050605)] shadow-[0_0_14px_-2px_rgba(204,255,0,0.35)]">
-                <LogoMark />
+              <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-xl border border-[var(--line-strong)] bg-[linear-gradient(160deg,#101210,#050605)] shadow-[0_0_20px_rgba(204,255,0,0.3)]">
+                <LogoMark className="h-11 w-11" />
               </div>
               <LogoWordmarkTitle />
               <div className="mt-1.5 text-[11px] text-white/32">

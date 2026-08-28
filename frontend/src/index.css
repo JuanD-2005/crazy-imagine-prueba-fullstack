@@ -227,6 +227,15 @@ body {
   overflow: hidden;
 }
 
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-text-fill-color: #eef1e9;
+  -webkit-box-shadow: 0 0 0 1000px #0d0e0d inset;
+  box-shadow: 0 0 0 1000px #0d0e0d inset;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 .btn-sheen::after {
   content: '';
   position: absolute;
