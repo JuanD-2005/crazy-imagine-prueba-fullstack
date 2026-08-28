@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { ProtectedRoute } from './features/auth/ProtectedRoute'
 import { LoginPage } from './pages/LoginPage'
 import { NewTicketPage } from './pages/NewTicketPage'
+import { TicketDetailPage } from './pages/TicketDetailPage'
 import { TicketsListPage } from './pages/TicketsListPage'
 
 function App() {
@@ -15,8 +16,11 @@ function App() {
           <Route path="/" element={<Navigate to="/tickets" replace />} />
           <Route path="/tickets" element={<TicketsListPage />} />
           <Route path="/tickets/new" element={<NewTicketPage />} />
+          <Route path="/tickets/:id" element={<TicketDetailPage />} />
         </Route>
       </Route>
+
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }
