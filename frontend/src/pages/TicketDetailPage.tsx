@@ -132,18 +132,23 @@ export function TicketDetailPage() {
                   <Tag key={tag}>{tag}</Tag>
                 ))}
               </div>
-              {query.data.suggestedReply && (
-                <div className="mt-4">
-                  <div className="mb-1.5 text-[10.5px] tracking-wide text-(--muted-dim) uppercase">
-                    Respuesta sugerida
-                  </div>
-                  <p className="rounded-[10px] bg-white/[0.03] p-3.5 text-[13px] leading-relaxed text-[#dfe3da]">
-                    {query.data.suggestedReply}
-                  </p>
-                </div>
-              )}
             </div>
           )}
+
+          {query.data.enrichmentStatus === 'done' &&
+            query.data.suggestedReply && (
+              <div className="mt-3.5 rounded-[14px] border-l-2 border-neon bg-[linear-gradient(135deg,rgba(204,255,0,0.06),rgba(204,255,0,0.015)_60%)] px-6 py-5.5">
+                <div className="mb-2.5 flex items-center gap-1.5 text-[10px] font-medium text-neon">
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-[11px] w-[11px]">
+                    <path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8L12 2z" />
+                  </svg>
+                  Respuesta sugerida por IA
+                </div>
+                <p className="text-[13px] leading-relaxed text-[#dfe3da]">
+                  {query.data.suggestedReply}
+                </p>
+              </div>
+            )}
         </div>
       )}
     </div>
