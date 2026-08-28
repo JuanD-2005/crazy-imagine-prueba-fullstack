@@ -1,0 +1,74 @@
+{
+  "name": "CrazySupportHub - Ticket Enrichment",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ticket-enrichment",
+        "responseMode": "onReceived",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "id": "1f6f4b2a-0001-4a00-9c00-000000000001",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 300],
+      "webhookId": "ticket-enrichment",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "incoming-webhook-secret",
+          "name": "Webhook Secret (incoming)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForAllItems",
+        "language": "javaScript",
+        "jsCode": "// ticketId se extrae una sola vez, fuera del try: si el payload no trae\n// ticketId no hay nada que reportar de vuelta, y así el catch nunca depende\n// de volver a tocar $input (que ya funcionó una vez arriba).\nconst rawBody = ($input.first().json && $input.first().json.body) || $input.first().json || {};\nconst ticketId = rawBody.ticketId;\n\ntry {\n  const title = String(rawBody.title || '').toLowerCase();\n  const description = String(rawBody.description || '').toLowerCase();\n  const text = `${title} ${description}`;\n\n  // Reglas de clasificación por keywords, en orden de prioridad de match.\n  const categoryRules = [\n    { category: 'billing', keywords: ['factura', 'cobro', 'pago', 'suscripción', 'cancelación', 'reembolso'] },\n    { category: 'technical', keywords: ['error', 'bug', 'no funciona', 'se cierra', 'crash', 'no carga', '500'] },\n    { category: 'account', keywords: ['contraseña', 'email', 'cuenta', 'acceso', 'sesión', 'login'] },\n  ];\n\n  const priorityRules = [\n    { priority: 'urgent', keywords: ['urgente', 'no puedo trabajar', 'crítico'] },\n    { priority: 'high', keywords: ['error 500', 'cobro duplicado', 'no funciona', 'no puedo iniciar sesión'] },\n    { priority: 'low', keywords: ['sugerencia', 'consulta', 'pregunta'] },\n  ];\n\n  const tags = [];\n\n  let category = 'other';\n  for (const rule of categoryRules) {\n    const hit = rule.keywords.find((kw) => text.includes(kw));\n    if (hit) {\n      category = rule.category;\n      tags.push(hit);\n      break;\n    }\n  }\n\n  let priority = 'medium';\n  for (const rule of priorityRules) {\n    const hit = rule.keywords.find((kw) => text.includes(kw));\n    if (hit) {\n      priority = rule.priority;\n      tags.push(hit);\n      break;\n    }\n  }\n\n  return [{ json: { ticketId, status: 'done', priority, category, tags } }];\n} catch (error) {\n  return [{ json: { ticketId, status: 'failed' } }];\n}"
+      },
+      "id": "1f6f4b2a-0002-4a00-9c00-000000000002",
+      "name": "Classify Ticket",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.BACKEND_CALLBACK_URL }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "1f6f4b2a-0003-4a00-9c00-000000000003",
+      "name": "Send Callback",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "outgoing-webhook-secret",
+          "name": "Webhook Secret (outgoing)"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [[{ "node": "Classify Ticket", "type": "main", "index": 0 }]]
+    },
+    "Classify Ticket": {
+      "main": [[{ "node": "Send Callback", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
