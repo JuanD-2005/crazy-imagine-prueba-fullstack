@@ -37,7 +37,7 @@
     {
       "parameters": {
         "method": "POST",
-        "url": "={{ $env.BACKEND_CALLBACK_URL }}",
+        "url": "http://backend:3000/webhooks/n8n/enrichment",
         "authentication": "genericCredentialType",
         "genericAuthType": "httpHeaderAuth",
         "sendBody": true,
