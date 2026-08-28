@@ -1,19 +1,16 @@
 import { Route, Routes } from 'react-router-dom'
-
-function Home() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <h1 className="text-2xl font-semibold text-gray-800">
-        CrazySupportHub
-      </h1>
-    </div>
-  )
-}
+import { Layout } from './components/Layout'
+import { ProtectedRoute } from './features/auth/ProtectedRoute'
+import { LoginPage } from './pages/LoginPage'
 
 function App() {
   return (
     <Routes>
-      <Route path="/" element={<Home />} />
+      <Route path="/login" element={<LoginPage />} />
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<Layout />} />
+      </Route>
     </Routes>
   )
 }
