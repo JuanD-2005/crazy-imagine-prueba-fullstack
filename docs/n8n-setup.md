@@ -43,20 +43,20 @@ el de `N8N_WEBHOOK_SECRET` en `backend/.env`.
 > seleccionados en cada nodo. Podés nombrarlas distinto si preferís, mientras
 > el **valor** del header sea el mismo `N8N_WEBHOOK_SECRET` en los dos.
 
-## 3. Verificar que `BACKEND_CALLBACK_URL` llegó al contenedor de n8n
+## 3. URL del callback (ya no requiere configuración)
 
-El nodo **Send Callback** apunta a `{{$env.BACKEND_CALLBACK_URL}}` en vez de
-una URL hardcodeada. `docker-compose.yml` ya define esa variable en el
-servicio `n8n` (`http://backend:3000/webhooks/n8n/enrichment`). Confirmalo así:
+El nodo **Send Callback** apunta al string literal
+`http://backend:3000/webhooks/n8n/enrichment` (el nombre de servicio del
+backend en la red de Docker Compose). Originalmente se pensó referenciarlo
+como `{{$env.BACKEND_CALLBACK_URL}}`, pero esta instancia de n8n bloquea el
+acceso a variables de entorno desde expresiones de nodo por defecto, así que
+se hardcodeó directamente en el workflow — no hay ninguna variable que
+configurar ni verificar acá.
 
-```bash
-docker compose exec n8n printenv BACKEND_CALLBACK_URL
-# debería imprimir: http://backend:3000/webhooks/n8n/enrichment
-```
-
-Si sale vacío, revisá que estés corriendo `docker compose up` desde la raíz
-del repo (no un `docker run` suelto) y que no hayas pisado el servicio `n8n`
-en un compose override.
+Si en el futuro se vuelve a usar `$env` (por ejemplo habilitando
+`N8N_BLOCK_ENV_ACCESS_IN_NODE=false`), `docker-compose.yml` ya trae
+`BACKEND_CALLBACK_URL` definida en el servicio `n8n` por si hace falta
+retomarla.
 
 ## 4. Activar el workflow
 

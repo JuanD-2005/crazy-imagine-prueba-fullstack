@@ -7,11 +7,11 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-crazysupporthub}
       POSTGRES_DB: ${POSTGRES_DB:-crazysupporthub}
     ports:
-      - '5432:5432'
+      - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-crazysupporthub}']
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-crazysupporthub}"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -24,11 +24,15 @@ services:
       N8N_PORT: 5678
       N8N_PROTOCOL: http
       WEBHOOK_URL: ${N8N_WEBHOOK_BASE_URL:-http://localhost:5678/}
-      # Referenciado desde el workflow como {{$env.BACKEND_CALLBACK_URL}} en vez
-      # de hardcodear la URL en el nodo HTTP Request del callback.
+      # El nodo "Send Callback" del workflow (n8n/workflow.json) tiene esta
+      # misma URL hardcodeada, no la lee de acá: esta instancia de n8n
+      # bloquea el acceso a $env desde expresiones de nodo por defecto. Se
+      # deja declarada por si en el futuro se habilita ese acceso y se
+      # retoma la referencia por variable.
       BACKEND_CALLBACK_URL: http://backend:3000/webhooks/n8n/enrichment
+
     ports:
-      - '5678:5678'
+      - "5678:5678"
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -47,7 +51,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-crazysupporthub}:${POSTGRES_PASSWORD:-crazysupporthub}@postgres:5432/${POSTGRES_DB:-crazysupporthub}?schema=public
       N8N_WEBHOOK_URL: http://n8n:5678/webhook/ticket-enrichment
     ports:
-      - '3000:3000'
+      - "3000:3000"
     volumes:
       - ./backend:/app
       - /app/node_modules
