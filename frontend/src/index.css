@@ -1,1 +1,240 @@
 @import 'tailwindcss';
+
+@theme {
+  --color-neon: #ccff00;
+  --color-neon-dim: #9fcc00;
+  --color-bg: #060706;
+  --color-panel: #0a0b0a;
+
+  --font-heading: 'Bricolage Grotesque', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --animate-rotate-border: rotate-border 5.5s linear infinite;
+  --animate-pulse-dot: pulse-dot 2s ease-in-out infinite;
+  --animate-sheen: sheen 3.2s ease-in-out infinite;
+  --animate-shimmer: shimmer 2.2s linear infinite;
+  --animate-sparkle: sparkle-pulse 1.6s ease-in-out infinite;
+}
+
+/* Custom property registration: le permite al navegador animar --angle como
+   un ángulo real (no como texto), que es lo que hace que el conic-gradient
+   del borde gire suavemente en vez de saltar entre frames. */
+@property --angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes rotate-border {
+  to {
+    --angle: 360deg;
+  }
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes sheen {
+  0% {
+    left: -40%;
+  }
+  35% {
+    left: 120%;
+  }
+  100% {
+    left: 120%;
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+@keyframes sparkle-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: scale(1.25);
+    opacity: 1;
+  }
+}
+
+:root {
+  /* Bordes translúcidos: quedan como custom properties planas (no como
+     tokens de color de Tailwind) porque son valores rgba() de un solo uso,
+     usados vía arbitrary values (`border-(--line)`). */
+  --line: rgba(255, 255, 255, 0.055);
+  --line-strong: rgba(255, 255, 255, 0.1);
+  --muted: rgba(255, 255, 255, 0.38);
+  --muted-dim: rgba(255, 255, 255, 0.24);
+}
+
+html,
+body {
+  height: 100%;
+  background: var(--color-bg);
+  color: #eef1e9;
+  font-family: var(--font-mono);
+}
+
+#root {
+  min-height: 100%;
+}
+
+/* ---------- efectos compuestos que no son atomizables como utilities ---------- */
+
+.spotlight-grid {
+  position: relative;
+  overflow: hidden;
+}
+
+.spotlight-grid::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(to right, var(--line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--line) 1px, transparent 1px);
+  background-size: 46px 46px;
+  mask-image: radial-gradient(
+    circle at var(--mx, 30%) var(--my, 40%),
+    black 0%,
+    black 15%,
+    transparent 70%
+  );
+  -webkit-mask-image: radial-gradient(
+    circle at var(--mx, 30%) var(--my, 40%),
+    black 0%,
+    black 15%,
+    transparent 70%
+  );
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.grain-overlay::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.spotlight-glow::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px 600px at var(--mx, 30%) var(--my, 40%),
+    rgba(204, 255, 0, 0.07),
+    transparent 60%
+  );
+  pointer-events: none;
+}
+
+.row-spotlight {
+  position: relative;
+  isolation: isolate;
+}
+
+.row-spotlight::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    220px circle at var(--mx, 50%) var(--my, 50%),
+    rgba(204, 255, 0, 0.055),
+    transparent 70%
+  );
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.row-spotlight:hover::before {
+  opacity: 1;
+}
+
+.card-border {
+  position: relative;
+  border-radius: 20px;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    transparent 62%,
+    rgba(204, 255, 0, 0.9) 72%,
+    #eaffb0 76%,
+    rgba(204, 255, 0, 0.9) 80%,
+    transparent 90%,
+    transparent 100%
+  );
+  animation: var(--animate-rotate-border);
+}
+
+.stat-border {
+  position: relative;
+  border-radius: 14px;
+  padding: 1px;
+  background: conic-gradient(
+    from var(--angle, 0deg),
+    transparent 0%,
+    transparent 60%,
+    rgba(204, 255, 0, 0.9) 71%,
+    #eaffb0 75%,
+    rgba(204, 255, 0, 0.9) 79%,
+    transparent 90%,
+    transparent 100%
+  );
+  animation: var(--animate-rotate-border);
+}
+
+.shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.35) 0%,
+    rgba(255, 255, 255, 0.35) 35%,
+    var(--color-neon) 50%,
+    rgba(255, 255, 255, 0.35) 65%,
+    rgba(255, 255, 255, 0.35) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: var(--animate-shimmer);
+}
+
+.btn-sheen {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-sheen::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -40%;
+  width: 30%;
+  height: 100%;
+  background: linear-gradient(120deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+  transform: skewX(-20deg);
+  animation: var(--animate-sheen);
+}
