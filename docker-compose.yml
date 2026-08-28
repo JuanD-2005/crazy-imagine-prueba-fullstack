@@ -50,6 +50,10 @@ services:
       # que traiga backend/.env (pensado para correr el backend en el host).
       DATABASE_URL: postgresql://${POSTGRES_USER:-crazysupporthub}:${POSTGRES_PASSWORD:-crazysupporthub}@postgres:5432/${POSTGRES_DB:-crazysupporthub}?schema=public
       N8N_WEBHOOK_URL: http://n8n:5678/webhook/ticket-enrichment
+      # El watch de nest-cli.json ya fuerza polling; esto es refuerzo por si
+      # alguna otra parte del toolchain usa chokidar — bind mounts no siempre
+      # propagan eventos de fs nativos de forma confiable.
+      CHOKIDAR_USEPOLLING: "true"
     ports:
       - "3000:3000"
     volumes:
@@ -59,7 +63,18 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-    command: sh -c "npx prisma migrate deploy && npm run start:dev"
+    # El watch mode de @nestjs/cli (`nest start --watch`) mata el child
+    # process viejo y levanta el nuevo sin esperar a que libere el puerto, y
+    # si ese respawn falla con EADDRINUSE el proceso padre NO muere — se
+    # queda vivo sirviendo el código stale del proceso anterior, en silencio
+    # (así que ni siquiera un `until` de supervisión externa lo detecta).
+    # `start:docker` (tsc --watch compilando a dist/ + nodemon corriendo el
+    # JS compilado) reemplaza ese watcher por uno que sí espera la salida
+    # completa del proceso antes de reiniciar. Probamos primero nodemon+tsx
+    # (sin paso de compilación), pero tsx no preserva los metadatos de
+    # decoradores que Nest necesita para inyección de dependencias — un
+    # provider con dependencias (p. ej. ConfigService) llegaba undefined.
+    command: sh -c "npx prisma migrate deploy && npm run start:docker"
 
 volumes:
   postgres_data:
