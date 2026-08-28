@@ -20,7 +20,8 @@
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
-    "test:e2e": "vitest run --config ./vitest.config.e2e.ts"
+    "pretest:e2e": "dotenv -e .env.test -- sh -c \"npx prisma migrate deploy && npx prisma db seed\"",
+    "test:e2e": "dotenv -e .env.test -- vitest run --config ./vitest.config.e2e.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -58,6 +59,7 @@
     "@types/pg": "^8.23.1",
     "@types/supertest": "^7.0.0",
     "@vitest/coverage-v8": "^4.1.2",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^10.9.1",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.6",
