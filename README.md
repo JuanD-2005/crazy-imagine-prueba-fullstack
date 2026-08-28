@@ -4,6 +4,10 @@ Herramienta interna de tickets de soporte con enriquecimiento automático (prior
 categoría, tags y respuesta sugerida) vía un workflow de n8n disparado al crear cada
 ticket.
 
+## Demo
+
+_[Link al video/GIF de la demo — pendiente de grabar]_
+
 ## Setup
 
 ### 1. Clonar y configurar variables de entorno
