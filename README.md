@@ -161,7 +161,30 @@ de red independientes que pueden fallar por separado:
    esos campos.
 
 Separar `processing` de `done` deja rastro de en qué salto de la cadena se frenó un
-ticket que nunca termina de enriquecerse (ver Pendientes).
+ticket que nunca termina de enriquecerse.
+
+### Reconciliación automática de tickets estancados
+
+Los dos saltos de red de arriba pueden fallar sin que nadie se entere: el `POST` saliente
+puede no responder nunca (ticket atascado en `pending`), o n8n puede recibirlo y nunca
+llegar al callback (atascado en `processing`). En vez de agregar infraestructura nueva
+(colas, Redis), `ReconciliationService` (`backend/src/webhooks/reconciliation.service.ts`)
+corre cada minuto vía `@nestjs/schedule` (`@Cron(CronExpression.EVERY_MINUTE)`) y resuelve
+ambos casos:
+
+- **`pending` con reintento**: reintenta el `POST` a n8n con backoff exponencial simple
+  (1 min / 5 min / 15 min entre intentos, según `Ticket.notifyAttempts`). Si el reintento
+  responde `2xx`, el ticket pasa a `processing` igual que en la creación original. Si
+  agota los 3 intentos sin éxito, se marca `enrichmentStatus: failed` — ya no tiene
+  sentido seguir reintentando indefinidamente. Dos columnas nuevas en `Ticket`
+  (`notifyAttempts`, `lastNotifyAttemptAt`) llevan la cuenta.
+- **`processing` con timeout**: si pasaron más de 10 minutos desde la última actualización
+  del ticket y sigue en `processing` sin callback, se marca `enrichmentStatus: failed`
+  directamente — no se reintenta el dispatch (ya se le envió el ticket a n8n; reintentarlo
+  podría duplicar la clasificación si el workflow solo estaba lento, no caído).
+
+Tests unitarios en `reconciliation.service.spec.ts` cubren los 3 casos con tiempo
+mockeado (`vi.useFakeTimers`/`vi.setSystemTime`), sin esperar minutos reales.
 
 ### Backend en el mismo docker-compose que n8n
 
@@ -279,12 +302,6 @@ eso es alcanzable por un agente sin acceso a esa UI.
 
 ## Pendientes / bugs conocidos
 
-- Si el disparo saliente a n8n falla (caído, timeout, DNS), el ticket queda en `pending`
-  indefinidamente — no hay reintento automático ni un job que lo reintente más tarde.
-- Si n8n recibe el webhook pero el workflow falla antes de llegar al nodo de callback
-  (ej. un error no capturado fuera del `try/catch` del nodo Code), el ticket queda en
-  `processing` indefinidamente — mismo motivo: no hay timeout de vuelta ni polling de
-  n8n que reconcilie el estado.
 - El frontend no tiene UI de edición de tickets (`PATCH /tickets/:id`) — el backend lo
   soporta y está testeado, pero no se priorizó una vista de edición para el alcance de
   esta entrega.

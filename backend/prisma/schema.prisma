@@ -57,22 +57,24 @@ model User {
 }
 
 model Ticket {
-  id               Int               @id @default(autoincrement())
-  title            String            @db.VarChar(200)
-  description      String
-  status           TicketStatus      @default(open)
-  createdById      Int
-  createdBy        User              @relation("TicketCreatedBy", fields: [createdById], references: [id])
-  assignedToId     Int?
-  assignedTo       User?             @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
-  priority         TicketPriority?
-  category         TicketCategory?
-  tags             String[]
-  suggestedReply   String?
-  enrichmentStatus EnrichmentStatus  @default(pending)
-  enrichedAt       DateTime?
-  createdAt        DateTime          @default(now())
-  updatedAt        DateTime          @updatedAt
+  id                  Int              @id @default(autoincrement())
+  title               String           @db.VarChar(200)
+  description         String
+  status              TicketStatus     @default(open)
+  createdById         Int
+  createdBy           User             @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedToId        Int?
+  assignedTo          User?            @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+  priority            TicketPriority?
+  category            TicketCategory?
+  tags                String[]
+  suggestedReply      String?
+  enrichmentStatus    EnrichmentStatus @default(pending)
+  enrichedAt          DateTime?
+  notifyAttempts      Int              @default(0)
+  lastNotifyAttemptAt DateTime?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
 
   @@index([createdById])
   @@index([assignedToId])
