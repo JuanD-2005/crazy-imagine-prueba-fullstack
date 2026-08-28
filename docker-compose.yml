@@ -24,6 +24,9 @@ services:
       N8N_PORT: 5678
       N8N_PROTOCOL: http
       WEBHOOK_URL: ${N8N_WEBHOOK_BASE_URL:-http://localhost:5678/}
+      # Referenciado desde el workflow como {{$env.BACKEND_CALLBACK_URL}} en vez
+      # de hardcodear la URL en el nodo HTTP Request del callback.
+      BACKEND_CALLBACK_URL: http://backend:3000/webhooks/n8n/enrichment
     ports:
       - '5678:5678'
     volumes:
@@ -31,6 +34,28 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      # "postgres" y "n8n" son los nombres de servicio en la red interna de
+      # Docker Compose — no "localhost". Estos dos valores sobreescriben lo
+      # que traiga backend/.env (pensado para correr el backend en el host).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-crazysupporthub}:${POSTGRES_PASSWORD:-crazysupporthub}@postgres:5432/${POSTGRES_DB:-crazysupporthub}?schema=public
+      N8N_WEBHOOK_URL: http://n8n:5678/webhook/ticket-enrichment
+    ports:
+      - '3000:3000'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - /app/src/generated
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && npm run start:dev"
 
 volumes:
   postgres_data:
