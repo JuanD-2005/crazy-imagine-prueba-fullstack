@@ -1,71 +1,79 @@
 import type { ReactNode } from 'react'
 
-type BadgeColor = 'gray' | 'blue' | 'yellow' | 'orange' | 'red' | 'green' | 'purple'
+type TagColor = 'blue' | 'yellow' | 'red' | 'purple' | 'green' | 'neon' | 'muted'
 
-const COLOR_CLASSES: Record<BadgeColor, string> = {
-  gray: 'bg-gray-100 text-gray-700',
-  blue: 'bg-blue-100 text-blue-700',
-  yellow: 'bg-yellow-100 text-yellow-800',
-  orange: 'bg-orange-100 text-orange-700',
-  red: 'bg-red-100 text-red-700',
-  green: 'bg-green-100 text-green-700',
-  purple: 'bg-purple-100 text-purple-700',
+const TAG_COLOR_CLASSES: Record<TagColor, string> = {
+  blue: 'text-[#8fb8ff] bg-[#588cff]/8 border-[#588cff]/18',
+  yellow: 'text-[#f2c464] bg-[#f2c464]/8 border-[#f2c464]/20',
+  red: 'text-[#ff8a8a] bg-[#ff5a5a]/8 border-[#ff5a5a]/22',
+  purple: 'text-[#c99bff] bg-[#b478ff]/8 border-[#b478ff]/20',
+  green: 'text-[#8fdca0] bg-[#4ecb6a]/8 border-[#4ecb6a]/20',
+  neon: 'text-neon bg-neon/6 border-neon/18',
+  muted: 'text-(--muted) bg-white/4 border-(--line-strong)',
 }
 
-export function Badge({
+export function Tag({
   children,
-  color = 'gray',
+  color = 'muted',
 }: {
   children: ReactNode
-  color?: BadgeColor
+  color?: TagColor
 }) {
   return (
     <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${COLOR_CLASSES[color]}`}
+      className={`inline-flex items-center gap-1 rounded-md border px-2.5 py-1 text-[10.5px] tracking-wide whitespace-nowrap ${TAG_COLOR_CLASSES[color]}`}
     >
       {children}
     </span>
   )
 }
 
-const STATUS_LABELS: Record<string, { label: string; color: BadgeColor }> = {
+const STATUS_LABELS: Record<string, { label: string; color: TagColor }> = {
   open: { label: 'Abierto', color: 'blue' },
   in_progress: { label: 'En progreso', color: 'yellow' },
   resolved: { label: 'Resuelto', color: 'green' },
-  closed: { label: 'Cerrado', color: 'gray' },
+  closed: { label: 'Cerrado', color: 'muted' },
 }
 
-const PRIORITY_LABELS: Record<string, { label: string; color: BadgeColor }> = {
-  low: { label: 'Baja', color: 'gray' },
-  medium: { label: 'Media', color: 'blue' },
-  high: { label: 'Alta', color: 'orange' },
+const PRIORITY_LABELS: Record<string, { label: string; color: TagColor }> = {
+  low: { label: 'Baja', color: 'muted' },
+  medium: { label: 'Media', color: 'yellow' },
+  high: { label: 'Alta', color: 'red' },
   urgent: { label: 'Urgente', color: 'red' },
 }
 
-const CATEGORY_LABELS: Record<string, { label: string; color: BadgeColor }> = {
+const CATEGORY_LABELS: Record<string, { label: string; color: TagColor }> = {
   billing: { label: 'Facturación', color: 'purple' },
   technical: { label: 'Técnico', color: 'blue' },
   account: { label: 'Cuenta', color: 'green' },
-  other: { label: 'Otro', color: 'gray' },
+  other: { label: 'Otro', color: 'muted' },
 }
 
 export function StatusBadge({ status }: { status: string }) {
-  const info = STATUS_LABELS[status] ?? { label: status, color: 'gray' as const }
-  return <Badge color={info.color}>{info.label}</Badge>
+  const info = STATUS_LABELS[status] ?? { label: status, color: 'muted' as const }
+  return <Tag color={info.color}>{info.label}</Tag>
 }
 
 export function PriorityBadge({ priority }: { priority: string | null }) {
   if (!priority) {
-    return <Badge color="gray">Sin clasificar</Badge>
+    return <Tag color="muted">Sin clasificar</Tag>
   }
-  const info = PRIORITY_LABELS[priority] ?? { label: priority, color: 'gray' as const }
-  return <Badge color={info.color}>{info.label}</Badge>
+  const info = PRIORITY_LABELS[priority] ?? { label: priority, color: 'muted' as const }
+  return <Tag color={info.color}>{info.label}</Tag>
 }
 
 export function CategoryBadge({ category }: { category: string | null }) {
   if (!category) {
-    return <Badge color="gray">Sin categoría</Badge>
+    return <Tag color="muted">Sin categoría</Tag>
   }
-  const info = CATEGORY_LABELS[category] ?? { label: category, color: 'gray' as const }
-  return <Badge color={info.color}>{info.label}</Badge>
+  const info = CATEGORY_LABELS[category] ?? { label: category, color: 'muted' as const }
+  return <Tag color={info.color}>{info.label}</Tag>
+}
+
+export function ProcessingTag() {
+  return (
+    <Tag color="neon">
+      <span aria-hidden>✦</span> Processing
+    </Tag>
+  )
 }

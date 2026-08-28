@@ -1,5 +1,13 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../features/auth/useAuth'
+import { LogoMark } from './Logo'
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/)
+  const first = parts[0]?.[0] ?? ''
+  const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? '') : ''
+  return (first + last).toUpperCase()
+}
 
 export function Layout() {
   const { user, logout } = useAuth()
@@ -11,36 +19,38 @@ export function Layout() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <nav className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
-          <Link to="/tickets" className="font-semibold text-gray-900">
-            CrazySupportHub
+    <div className="min-h-screen bg-bg">
+      <div className="mx-auto max-w-[1040px] px-6 pt-9 pb-20">
+        <header className="mb-8 flex items-center justify-between">
+          <Link to="/tickets" className="flex items-center gap-2.5">
+            <LogoMark />
+            <span className="font-heading text-[17px] font-semibold tracking-tight text-[#eef1e9]">
+              Crazy<b className="font-semibold text-neon">Support</b>Hub
+            </span>
           </Link>
 
           {user && (
-            <div className="flex items-center gap-4 text-sm">
-              <span className="text-gray-600">
-                {user.name}{' '}
-                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-700">
-                  {user.role}
-                </span>
+            <div className="flex items-center gap-3.5">
+              <div className="flex h-7 w-7 items-center justify-center rounded-full border border-(--line-strong) bg-[linear-gradient(160deg,#1a1c19,#0a0b0a)] text-[10px] text-(--muted)">
+                {initials(user.name)}
+              </div>
+              <span className="text-[12.5px] text-(--muted)">{user.name}</span>
+              <span className="rounded-md border border-(--line-strong) px-1.75 py-0.75 text-[9.5px] tracking-wide text-(--muted) uppercase">
+                {user.role}
               </span>
               <button
                 type="button"
                 onClick={handleLogout}
-                className="rounded-md border border-gray-300 px-3 py-1.5 text-sm font-medium text-gray-700 transition hover:bg-gray-100"
+                className="rounded-lg border border-(--line-strong) px-3.5 py-2 text-[12px] text-(--muted) transition hover:border-white/22 hover:text-white"
               >
                 Cerrar sesión
               </button>
             </div>
           )}
-        </div>
-      </nav>
+        </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-6">
         <Outlet />
-      </main>
+      </div>
     </div>
   )
 }

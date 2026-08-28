@@ -1,8 +1,8 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { CategoryBadge, PriorityBadge, StatusBadge } from '../components/Badge'
-import { useDebouncedValue } from '../hooks/useDebouncedValue'
+import { TicketRow } from '../features/tickets/TicketRow'
+import { useTicketStats } from '../features/tickets/useTicketStats'
 import { apiRequest } from '../lib/api-client'
 import type { PaginatedTickets } from '../types'
 
@@ -36,15 +36,47 @@ const SORT_OPTIONS = [
   { value: 'priority', label: 'Prioridad' },
 ]
 
-function formatDate(iso: string) {
-  return new Date(iso).toLocaleString('es-VE', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  })
+const selectClass =
+  'appearance-none rounded-lg border border-(--line-strong) bg-[#08090a] px-3 py-2.5 pr-8 text-[11.5px] text-(--muted) transition hover:border-white/20 hover:text-[#eee]'
+
+function FilterSelect({
+  value,
+  onChange,
+  options,
+  labelPrefix,
+}: {
+  value: string
+  onChange: (value: string) => void
+  options: { value: string; label: string }[]
+  labelPrefix?: string
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={selectClass}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {labelPrefix ? `${labelPrefix}${option.label}` : option.label}
+          </option>
+        ))}
+      </select>
+      <svg
+        viewBox="0 0 10 6"
+        fill="none"
+        className="pointer-events-none absolute top-1/2 right-3 h-1.5 w-2.5 -translate-y-1/2 text-(--muted-dim)"
+      >
+        <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    </div>
+  )
 }
 
 export function TicketsListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const stats = useTicketStats()
 
   const status = searchParams.get('status') ?? ''
   const priority = searchParams.get('priority') ?? ''
@@ -56,20 +88,20 @@ export function TicketsListPage() {
   const sortOrder = searchParams.get('sortOrder') ?? 'desc'
 
   const [searchDraft, setSearchDraft] = useState(search)
-  const debouncedSearch = useDebouncedValue(searchDraft, 300)
 
-  // Si la URL cambia desde afuera (atrás/adelante del navegador), reflejarlo
-  // en el input.
   useEffect(() => {
     setSearchDraft(search)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search])
 
   useEffect(() => {
-    if (debouncedSearch === search) return
-    updateParams({ search: debouncedSearch || undefined }, true)
+    const timeout = setTimeout(() => {
+      if (searchDraft === search) return
+      updateParams({ search: searchDraft || undefined }, true)
+    }, 300)
+    return () => clearTimeout(timeout)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedSearch])
+  }, [searchDraft])
 
   function updateParams(
     updates: Record<string, string | undefined>,
@@ -105,87 +137,103 @@ export function TicketsListPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-lg font-semibold text-gray-900">Tickets</h1>
+      <div className="mb-6 flex items-end justify-between">
+        <h1 className="font-heading text-[26px] font-semibold tracking-tight text-[#eef1e9]">
+          Tickets
+        </h1>
         <Link
           to="/tickets/new"
-          className="rounded-md bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-700"
+          className="btn-sheen rounded-[9px] bg-neon px-4 py-2.5 font-mono text-[12.5px] font-medium text-[#0a0c06] transition hover:-translate-y-px hover:shadow-[0_4px_20px_-4px_rgba(204,255,0,0.45)]"
         >
           Nuevo ticket
         </Link>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-3">
+      <div className="mb-6 grid grid-cols-3 gap-3.5">
+        <div className="rounded-[14px] border border-(--line) bg-panel px-5 py-4.5">
+          <div className="mb-2.5 text-[10.5px] tracking-wide text-(--muted-dim) uppercase">
+            Open
+          </div>
+          <div className="font-heading text-[30px] font-semibold text-[#f2f4ee]">
+            {stats.open ?? '—'}
+          </div>
+        </div>
+
+        <div className="stat-border">
+          <div className="h-full rounded-[13px] bg-[#050605] px-5 py-4.5">
+            <div className="mb-2.5 flex items-center gap-1.5 text-[10.5px] tracking-wide text-(--muted-dim) uppercase">
+              <span className="h-[5px] w-[5px] animate-pulse-dot rounded-full bg-neon shadow-[0_0_5px_1px_rgba(204,255,0,0.8)]" />
+              Urgent
+            </div>
+            <div className="font-heading text-[30px] font-semibold text-neon">
+              {stats.urgent ?? '—'}
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-[14px] border border-(--line) bg-panel px-5 py-4.5">
+          <div className="mb-2.5 text-[10.5px] tracking-wide text-(--muted-dim) uppercase">
+            Resueltos
+          </div>
+          <div className="font-heading text-[30px] font-semibold text-[#f2f4ee]">
+            {stats.resolved ?? '—'}
+          </div>
+        </div>
+      </div>
+
+      <div className="mb-3.5 flex items-center gap-2.5 rounded-[11px] border border-(--line-strong) bg-[#08090a] px-3.5 py-3 transition focus-within:border-neon/40 focus-within:shadow-[0_0_0_3px_rgba(204,255,0,0.06)]">
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5 shrink-0 text-(--muted-dim)"
+        >
+          <circle cx="11" cy="11" r="7" />
+          <path d="M21 21l-4.35-4.35" />
+        </svg>
         <input
           type="text"
           value={searchDraft}
           onChange={(event) => setSearchDraft(event.target.value)}
           placeholder="Buscar por título o descripción…"
-          className="min-w-[220px] flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-gray-500 focus:outline-none"
+          className="flex-1 bg-transparent font-mono text-[13px] text-[#eef1e9] outline-none placeholder:text-(--muted-dim)"
         />
+        <div className="hidden items-center gap-0.5 rounded-md border border-(--line-strong) bg-[#0f100f] px-1.75 py-0.75 text-[10.5px] tracking-wide text-(--muted) sm:flex">
+          ⌘ K
+        </div>
+      </div>
 
-        <select
+      <div className="mb-5 flex flex-wrap gap-2.5">
+        <FilterSelect
           value={status}
-          onChange={(event) =>
-            updateParams({ status: event.target.value || undefined }, true)
-          }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-        >
-          {STATUS_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <select
+          onChange={(value) => updateParams({ status: value || undefined }, true)}
+          options={STATUS_OPTIONS}
+        />
+        <FilterSelect
           value={priority}
-          onChange={(event) =>
-            updateParams({ priority: event.target.value || undefined }, true)
-          }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-        >
-          {PRIORITY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <select
+          onChange={(value) => updateParams({ priority: value || undefined }, true)}
+          options={PRIORITY_OPTIONS}
+        />
+        <FilterSelect
           value={category}
-          onChange={(event) =>
-            updateParams({ category: event.target.value || undefined }, true)
-          }
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-        >
-          {CATEGORY_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-
-        <select
+          onChange={(value) => updateParams({ category: value || undefined }, true)}
+          options={CATEGORY_OPTIONS}
+        />
+        <FilterSelect
           value={sortBy}
-          onChange={(event) => updateParams({ sortBy: event.target.value }, true)}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-        >
-          {SORT_OPTIONS.map((option) => (
-            <option key={option.value} value={option.value}>
-              Ordenar por: {option.label}
-            </option>
-          ))}
-        </select>
-
-        <select
+          onChange={(value) => updateParams({ sortBy: value }, true)}
+          options={SORT_OPTIONS}
+          labelPrefix="Ordenar por: "
+        />
+        <FilterSelect
           value={sortOrder}
-          onChange={(event) => updateParams({ sortOrder: event.target.value }, true)}
-          className="rounded-md border border-gray-300 px-3 py-2 text-sm"
-        >
-          <option value="desc">Descendente</option>
-          <option value="asc">Ascendente</option>
-        </select>
+          onChange={(value) => updateParams({ sortOrder: value }, true)}
+          options={[
+            { value: 'desc', label: 'Descendente' },
+            { value: 'asc', label: 'Ascendente' },
+          ]}
+        />
       </div>
 
       {query.isLoading && (
@@ -193,21 +241,21 @@ export function TicketsListPage() {
           {[...Array(5)].map((_, index) => (
             <li
               key={index}
-              className="h-16 animate-pulse rounded-lg border border-gray-200 bg-gray-100"
+              className="h-16 animate-pulse rounded-[14px] border border-(--line) bg-panel"
             />
           ))}
         </ul>
       )}
 
       {query.isError && (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-6 text-center">
-          <p className="mb-3 text-sm text-red-700">
+        <div className="rounded-[14px] border border-red-500/20 bg-red-500/5 p-8 text-center">
+          <p className="mb-3 text-[13px] text-red-300">
             No se pudieron cargar los tickets.
           </p>
           <button
             type="button"
             onClick={() => query.refetch()}
-            className="rounded-md border border-red-300 bg-white px-4 py-2 text-sm font-medium text-red-700 transition hover:bg-red-100"
+            className="rounded-lg border border-red-500/30 bg-transparent px-4 py-2 text-[12.5px] font-medium text-red-300 transition hover:bg-red-500/10"
           >
             Reintentar
           </button>
@@ -215,11 +263,11 @@ export function TicketsListPage() {
       )}
 
       {query.data && query.data.data.length === 0 && (
-        <div className="rounded-lg border border-gray-200 bg-white p-10 text-center">
-          <p className="text-sm font-medium text-gray-900">
+        <div className="rounded-[14px] border border-(--line) bg-panel p-10 text-center">
+          <p className="text-[13px] font-medium text-[#eef1e9]">
             No se encontraron tickets
           </p>
-          <p className="mt-1 text-sm text-gray-500">
+          <p className="mt-1 text-[12.5px] text-(--muted)">
             Probá ajustar los filtros o el texto de búsqueda.
           </p>
         </div>
@@ -227,30 +275,13 @@ export function TicketsListPage() {
 
       {query.data && query.data.data.length > 0 && (
         <>
-          <ul className="space-y-2">
+          <div className="overflow-hidden rounded-[14px] border border-(--line) bg-panel">
             {query.data.data.map((ticket) => (
-              <li key={ticket.id}>
-                <Link
-                  to={`/tickets/${ticket.id}`}
-                  className="block rounded-lg border border-gray-200 bg-white p-4 transition hover:border-gray-300 hover:shadow-sm"
-                >
-                  <div className="mb-2 flex items-start justify-between gap-4">
-                    <h2 className="font-medium text-gray-900">{ticket.title}</h2>
-                    <span className="whitespace-nowrap text-xs text-gray-500">
-                      {formatDate(ticket.createdAt)}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <StatusBadge status={ticket.status} />
-                    <PriorityBadge priority={ticket.priority} />
-                    <CategoryBadge category={ticket.category} />
-                  </div>
-                </Link>
-              </li>
+              <TicketRow key={ticket.id} ticket={ticket} />
             ))}
-          </ul>
+          </div>
 
-          <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <div className="mt-4 flex items-center justify-between text-[12px] text-(--muted)">
             <span>
               {query.data.total} ticket{query.data.total === 1 ? '' : 's'} · página{' '}
               {page} de {totalPages}
@@ -260,7 +291,7 @@ export function TicketsListPage() {
                 type="button"
                 disabled={page <= 1}
                 onClick={() => updateParams({ page: String(page - 1) })}
-                className="rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-(--line-strong) px-3 py-1.5 font-medium transition hover:border-white/20 hover:text-[#eee] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Anterior
               </button>
@@ -268,7 +299,7 @@ export function TicketsListPage() {
                 type="button"
                 disabled={page >= totalPages}
                 onClick={() => updateParams({ page: String(page + 1) })}
-                className="rounded-md border border-gray-300 px-3 py-1.5 font-medium text-gray-700 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg border border-(--line-strong) px-3 py-1.5 font-medium transition hover:border-white/20 hover:text-[#eee] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Siguiente
               </button>
