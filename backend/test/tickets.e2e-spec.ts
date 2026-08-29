@@ -183,6 +183,70 @@ describe('Tickets (e2e)', () => {
       .expect(403);
   });
 
+  it('an agent updates the status of their own ticket and it persists', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/tickets')
+      .set('Authorization', `Bearer ${brunoToken}`)
+      .send({
+        title: 'Ticket para probar cambio de status',
+        description:
+          'Verifica que un agent pueda actualizar el status de su propio ticket.',
+      })
+      .expect(201);
+
+    const ticketId = (created.body as TicketBody).id;
+    createdTicketIds.push(ticketId);
+
+    const patchResponse = await request(app.getHttpServer())
+      .patch(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${brunoToken}`)
+      .send({ status: 'in_progress' })
+      .expect(200);
+
+    expect((patchResponse.body as { status: string }).status).toBe(
+      'in_progress',
+    );
+
+    const getResponse = await request(app.getHttpServer())
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${brunoToken}`)
+      .expect(200);
+
+    expect((getResponse.body as { status: string }).status).toBe('in_progress');
+  });
+
+  it('an admin updates the status of a ticket they do not own', async () => {
+    const created = await request(app.getHttpServer())
+      .post('/tickets')
+      .set('Authorization', `Bearer ${carlaToken}`)
+      .send({
+        title: 'Ticket de Carla para que el admin lo cierre',
+        description:
+          'Verifica que un admin pueda actualizar el status de un ticket ajeno.',
+      })
+      .expect(201);
+
+    const ticketId = (created.body as TicketBody).id;
+    createdTicketIds.push(ticketId);
+
+    // "resolved" a propósito, no "closed": el test de abajo
+    // ("filtering by status=closed") espera exactamente los 2 tickets
+    // "closed" del seed, y este ticket recién creado no se borra hasta
+    // el afterAll del archivo.
+    await request(app.getHttpServer())
+      .patch(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .send({ status: 'resolved' })
+      .expect(200);
+
+    const getResponse = await request(app.getHttpServer())
+      .get(`/tickets/${ticketId}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect((getResponse.body as { status: string }).status).toBe('resolved');
+  });
+
   it('GET /tickets/:id for a nonexistent ticket returns 404', async () => {
     await request(app.getHttpServer())
       .get('/tickets/999999')
