@@ -234,6 +234,36 @@ backend indefinidamente después de que el dato ya no cambia. TanStack Query tam
 pausa el polling automáticamente cuando la pestaña del navegador no está visible
 (comportamiento por defecto, no algo que se implementó a mano).
 
+### Registro deshabilitado en el frontend (decisión consciente)
+
+`POST /auth/register` existe y funciona en el backend (probado con su propio test e2e),
+pero el frontend no expone ningún camino para llegar a él — `LoginPage` reemplaza el link
+típico de "Crear una cuenta" por un texto informativo ("Registro deshabilitado — pedile
+una cuenta a un admin"). No es un endpoint a medio conectar ni una feature que falta:
+CrazySupportHub es una herramienta interna, no un producto de auto-registro público, así
+que las cuentas las crea un admin, no el propio usuario. Dejar el endpoint activo en el
+backend sin exponerlo en el frontend es intencional — sirve para pruebas, scripts, o para
+que un admin cree cuentas por API sin necesitar una pantalla dedicada — y no representa un
+riesgo porque el DTO fuerza `role: agent` siempre; no hay forma de crear un admin por ahí
+(ver Seguridad).
+
+### Scoping de status: mismo criterio en frontend y backend
+
+El selector de estado en el detalle del ticket (`frontend/src/pages/TicketDetailPage.tsx`)
+decide si mostrarse con la misma regla que el backend ya aplica en `assertCanAccess`
+(`backend/src/tickets/tickets.service.ts`): admin sin restricción, agent solo si es
+`createdBy` o `assignedTo` del ticket. El frontend la replica en `canEditStatus` usando los
+datos que ya trae el ticket cargado, sin pedirle nada extra al backend.
+
+Por qué duplicar la regla si el backend ya la garantiza (el `PATCH` rechaza con `403` pase
+lo que pase en el cliente): es defensa en profundidad, no una fuente de verdad nueva. El
+backend sigue siendo quien decide de verdad — si el criterio del cliente alguna vez queda
+desactualizado o hay un bug en el frontend, el peor caso es un `403` manejado en pantalla,
+nunca un cambio de estado no autorizado. En la práctica, hoy `canEditStatus` casi siempre
+coincide con "el ticket cargó" (lectura y escritura comparten el mismo criterio de
+ownership), pero ocultar el control igual evita mostrarle al usuario una acción que ya
+sabemos de antemano que va a fallar.
+
 ### La historia real del fix de `nest --watch` en Docker
 
 El comando original del servicio `backend` era `nest start --watch` corriendo dentro del
@@ -260,6 +290,27 @@ emite esos metadatos correctamente) + `nodemon` watcheando `dist/**/*.js` con `-
 Probado con ediciones rápidas y sucesivas sin ningún crash.
 
 ## Uso de IA
+
+### IA dentro del producto: nodo de Gemini en el workflow de n8n
+
+Más allá de la clasificación por keywords del nodo `Classify Ticket`, el workflow de n8n
+agrega un nodo de **Gemini** (`gemini-3-flash-preview`) que genera `suggestedReply` — una
+respuesta breve y profesional en español, lista para que un agente la revise y la envíe
+casi tal cual al cliente. El nodo corre después de `Classify Ticket` y antes de
+`Send Callback`; su salida se parsea y se valida contra el contrato exacto de
+`EnrichmentCallbackDto`
+([`backend/src/webhooks/dto/enrichment-callback.dto.ts`](backend/src/webhooks/dto/enrichment-callback.dto.ts))
+antes de mandarla al callback, así que nunca puede llegarle al backend un valor de
+`priority`/`category` fuera del enum, pase lo que pase en la respuesta del modelo.
+
+**Estrategia de fallback** si Gemini falla o devuelve algo no parseable: el nodo tiene
+configurado **"On Error: Continue"**, así que el workflow no se cuelga — el ticket igual
+se clasifica con `priority`/`category`/`tags` de `Classify Ticket` (determinístico, sin
+dependencia externa) y simplemente `suggestedReply` queda sin valor. La IA generativa
+nunca es un punto único de falla del enriquecimiento: en el peor caso el ticket pierde
+solo la respuesta sugerida, no la clasificación.
+
+### Cómo se construyó este proyecto
 
 Este proyecto se construyó con **Claude** (planeación y revisión de cada fase) +
 **Claude Code** (ejecución — un prompt detallado por fase, ver
