@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { CategoryBadge, PriorityBadge, StatusBadge, Tag } from '../components/Badge'
 import { useAuth } from '../features/auth/useAuth'
 import { ApiError, apiRequest } from '../lib/api-client'
@@ -59,6 +59,7 @@ export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const { user } = useAuth()
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
 
   const query = useQuery({
     queryKey: ['ticket', id],
@@ -83,6 +84,21 @@ export function TicketDetailPage() {
     (user.role === 'admin' ||
       query.data.createdById === user.id ||
       query.data.assignedToId === user.id)
+
+  const isAdmin = user?.role === 'admin'
+
+  const deleteTicket = useMutation({
+    mutationFn: () => apiRequest<void>(`/tickets/${id}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      navigate('/tickets', { state: { deleted: true } })
+    },
+  })
+
+  const handleDeleteClick = () => {
+    if (window.confirm('¿Eliminar este ticket? Esta acción no se puede deshacer.')) {
+      deleteTicket.mutate()
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[680px]">
@@ -231,6 +247,26 @@ export function TicketDetailPage() {
                 </p>
               </div>
             )}
+
+          {isAdmin && (
+            <div className="mt-6 border-t border-(--line) pt-5">
+              <button
+                type="button"
+                onClick={handleDeleteClick}
+                disabled={deleteTicket.isPending}
+                className="rounded-[10px] border border-red-500/30 bg-red-500/5 px-4 py-2.5 text-[12.5px] font-medium text-red-300 transition hover:bg-red-500/10 disabled:cursor-wait disabled:opacity-50"
+              >
+                {deleteTicket.isPending ? 'Eliminando…' : 'Eliminar ticket'}
+              </button>
+              {deleteTicket.isError && (
+                <p className="mt-2 text-[12px] text-red-300">
+                  {deleteTicket.error instanceof ApiError
+                    ? deleteTicket.error.message
+                    : 'No se pudo eliminar el ticket. Intentá de nuevo.'}
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

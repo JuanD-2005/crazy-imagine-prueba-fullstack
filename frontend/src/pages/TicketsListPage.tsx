@@ -1,6 +1,6 @@
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useSearchParams } from 'react-router-dom'
 import { TicketRow } from '../features/tickets/TicketRow'
 import { useTicketStats } from '../features/tickets/useTicketStats'
 import { apiRequest } from '../lib/api-client'
@@ -76,6 +76,8 @@ function FilterSelect({
 
 export function TicketsListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
+  const location = useLocation()
+  const deleted = (location.state as { deleted?: boolean } | null)?.deleted
   const stats = useTicketStats()
 
   const status = searchParams.get('status') ?? ''
@@ -137,6 +139,12 @@ export function TicketsListPage() {
 
   return (
     <div>
+      {deleted && (
+        <p className="mb-4 rounded-md border border-neon/20 bg-neon/8 px-3 py-2 text-center text-[12.5px] text-neon">
+          Ticket eliminado correctamente.
+        </p>
+      )}
+
       <div className="mb-6 flex items-end justify-between">
         <h1 className="font-heading text-[26px] font-semibold tracking-tight text-[#eef1e9]">
           Tickets
