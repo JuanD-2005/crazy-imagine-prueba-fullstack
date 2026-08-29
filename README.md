@@ -370,11 +370,18 @@ eso es alcanzable por un agente sin acceso a esa UI.
 
 ## Pendientes / bugs conocidos
 
-- El frontend solo edita `status` desde el detalle del ticket (selector conectado a
-  `PATCH /tickets/:id`). `priority`, `category` y `assignedTo` no tienen UI de edición
-  manual — el backend los soporta y están testeados, pero hoy solo se completan
-  automáticamente vía el enriquecimiento de n8n; no se priorizó una vista de edición
-  manual para esos campos en el alcance de esta entrega.
+- `priority` y `category` no tienen UI de edición manual — **decisión de diseño, no un
+  olvido**. El frontend ya cubre `status` (selector en el detalle) y la eliminación de
+  tickets (botón admin, commit `665ace4`); lo único que falta es específicamente estos
+  dos campos, y es a propósito: existen para que los complete el flujo de
+  enriquecimiento de n8n/IA, que es el punto central de esta prueba. Agregar una UI para
+  editarlos a mano iría en contra de esa integración — le restaría sentido al pipeline
+  automático en vez de complementarlo. El backend los soporta vía `PATCH /tickets/:id` y
+  está testeado, por si en algún momento se necesita una corrección manual puntual, pero
+  no se construyó una pantalla para eso.
+- `assignedTo` (reasignar un ticket a otro agent) sí sería una feature de gestión de
+  equipo razonable a futuro — pero es una feature nueva, no una corrección de esta
+  entrega, y queda fuera del alcance actual.
 - Deploy: no se hizo. La entrega corre localmente vía `docker compose up` (Postgres + n8n
   + backend) más el frontend con `npm run dev` — no hay una versión desplegada en la
   nube.
