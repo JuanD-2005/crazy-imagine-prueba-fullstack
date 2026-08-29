@@ -19,11 +19,18 @@ cp backend/.env.example backend/.env
 cp frontend/.env.example frontend/.env
 ```
 
-En `backend/.env`, completá `JWT_SECRET` y `N8N_WEBHOOK_SECRET` con valores random
-propios (cualquier string largo sirve para desarrollo local). El resto de las variables
-(`DATABASE_URL`, `N8N_WEBHOOK_URL`, `PORT`, `CORS_ORIGIN`) ya vienen con los valores
-correctos para correr todo vía Docker Compose — no hace falta tocarlas. `frontend/.env`
-ya trae `VITE_API_URL=http://localhost:3000`, que es donde queda publicado el backend.
+En `backend/.env`, completá `JWT_SECRET`, `N8N_WEBHOOK_SECRET` e **`INVITE_CODE`** con
+valores random propios (cualquier string largo sirve para desarrollo local). El resto de
+las variables (`DATABASE_URL`, `N8N_WEBHOOK_URL`, `PORT`, `CORS_ORIGIN`) ya vienen con los
+valores correctos para correr todo vía Docker Compose — no hace falta tocarlas.
+`frontend/.env` ya trae `VITE_API_URL=http://localhost:3000`, que es donde queda publicado
+el backend.
+
+> **`INVITE_CODE` es un secreto compartido, no un placeholder decorativo**: protege
+> `POST /auth/register` (ver Decisiones técnicas). El valor que trae `.env.example`
+> (`replace-with-a-shared-invite-code`) es público — está commiteado en el repo — así que
+> dejarlo sin cambiar en cualquier entorno que no sea local/desarrollo anula por completo
+> el propósito del gate de invitación: cualquiera que lea el repo puede registrarse.
 
 > Si preferís correr el backend fuera de Docker (`npm run start:dev` en el host) en vez
 > de en el contenedor, `DATABASE_URL` y `N8N_WEBHOOK_URL` necesitan `localhost` en vez de
