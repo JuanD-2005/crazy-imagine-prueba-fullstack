@@ -1,41 +1,39 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { LogoMark } from '../components/Logo'
-import { loginSchema, type LoginFormValues } from '../features/auth/schemas'
-import { useAuth } from '../features/auth/useAuth'
+import { registerSchema, type RegisterFormValues } from '../features/auth/schemas'
 import { useMouseSpotlight } from '../hooks/useMouseSpotlight'
-import { ApiError } from '../lib/api-client'
+import { ApiError, apiRequest } from '../lib/api-client'
 
-export function LoginPage() {
-  const { login } = useAuth()
+export function RegisterPage() {
   const navigate = useNavigate()
-  const location = useLocation()
   const [formError, setFormError] = useState<string | null>(null)
-  const registered = (location.state as { registered?: boolean } | null)?.registered
   const spotlight = useMouseSpotlight('percent')
 
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+  } = useForm<RegisterFormValues>({
+    resolver: zodResolver(registerSchema),
   })
 
-  const onSubmit = async (values: LoginFormValues) => {
+  const onSubmit = async (values: RegisterFormValues) => {
     setFormError(null)
     try {
-      await login(values.email, values.password)
-      const redirectTo =
-        (location.state as { from?: string } | null)?.from ?? '/tickets'
-      navigate(redirectTo, { replace: true })
+      await apiRequest('/auth/register', { method: 'POST', body: values })
+      navigate('/login', { state: { registered: true }, replace: true })
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) {
-        setFormError('Email o contraseña incorrectos.')
+      if (error instanceof ApiError && error.status === 403) {
+        setFormError('Código de invitación inválido.')
+      } else if (error instanceof ApiError && error.status === 409) {
+        setFormError('Ya existe una cuenta con ese email.')
+      } else if (error instanceof ApiError) {
+        setFormError(error.message)
       } else {
-        setFormError('No se pudo iniciar sesión. Intentá de nuevo.')
+        setFormError('No se pudo crear la cuenta. Intentá de nuevo.')
       }
     }
   }
@@ -61,14 +59,14 @@ export function LoginPage() {
           </div>
 
           <h1 className="max-w-[520px] font-heading text-[clamp(38px,4.4vw,58px)] leading-[1.02] font-semibold tracking-tight text-[#f3f5ef]">
-            Empowering support
+            Sumate al equipo
             <br />
-            with <span className="text-neon not-italic">advanced</span> technology.
+            con una <span className="text-neon not-italic">invitación</span>.
           </h1>
 
           <p className="mt-5 max-w-[400px] font-mono text-[13.5px] leading-[1.7] text-white/42">
-            Un solo panel para tickets, IA de triage y automatizaciones. Diseñado para
-            equipos que resuelven rápido y no pierden contexto.
+            El registro está protegido con un código de invitación compartido — pedile el
+            tuyo a un admin antes de crear tu cuenta.
           </p>
         </div>
 
@@ -78,7 +76,7 @@ export function LoginPage() {
         </div>
       </div>
 
-      {/* ---------- Panel derecho: login card ---------- */}
+      {/* ---------- Panel derecho: register card ---------- */}
       <div className="grain-overlay relative flex items-center justify-center bg-bg">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(500px_400px_at_50%_20%,rgba(204,255,0,0.035),transparent_65%)]" />
 
@@ -88,19 +86,34 @@ export function LoginPage() {
               <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-xl border border-[var(--line-strong)] bg-[linear-gradient(160deg,#101210,#050605)] shadow-[0_0_20px_rgba(204,255,0,0.3)]">
                 <LogoMark className="h-11 w-11" />
               </div>
-              <LogoWordmarkTitle />
+              <div className="font-heading text-[19px] font-semibold tracking-tight text-[#f2f4ee]">
+                Crazy<b className="font-semibold text-neon">Support</b>Hub
+              </div>
               <div className="mt-1.5 text-[11px] text-white/32">
-                Iniciá sesión para ver los tickets de soporte
+                Creá tu cuenta con un código de invitación
               </div>
             </div>
 
-            {registered && (
-              <p className="mb-4 rounded-md border border-neon/20 bg-neon/8 px-3 py-2 text-center text-[12.5px] text-neon">
-                Cuenta creada. Iniciá sesión para continuar.
-              </p>
-            )}
-
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
+              <div>
+                <label
+                  htmlFor="name"
+                  className="mb-2 block text-[10.5px] tracking-[0.12em] text-white/38 uppercase"
+                >
+                  Nombre
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  autoComplete="name"
+                  className="w-full rounded-[10px] border border-[var(--line-strong)] bg-[#0d0e0d] px-3.5 py-3 font-mono text-[13.5px] text-[#eef1e9] outline-none transition placeholder:text-white/22 focus:border-neon/55 focus:shadow-[0_0_0_3px_rgba(204,255,0,0.08)]"
+                  {...register('name')}
+                />
+                {errors.name && (
+                  <p className="mt-1.5 text-[12px] text-red-400">{errors.name.message}</p>
+                )}
+              </div>
+
               <div>
                 <label
                   htmlFor="email"
@@ -130,12 +143,33 @@ export function LoginPage() {
                 <input
                   id="password"
                   type="password"
-                  autoComplete="current-password"
+                  autoComplete="new-password"
                   className="w-full rounded-[10px] border border-[var(--line-strong)] bg-[#0d0e0d] px-3.5 py-3 font-mono text-[13.5px] text-[#eef1e9] outline-none transition placeholder:text-white/22 focus:border-neon/55 focus:shadow-[0_0_0_3px_rgba(204,255,0,0.08)]"
                   {...register('password')}
                 />
                 {errors.password && (
                   <p className="mt-1.5 text-[12px] text-red-400">{errors.password.message}</p>
+                )}
+              </div>
+
+              <div>
+                <label
+                  htmlFor="inviteCode"
+                  className="mb-2 block text-[10.5px] tracking-[0.12em] text-white/38 uppercase"
+                >
+                  Código de invitación
+                </label>
+                <input
+                  id="inviteCode"
+                  type="text"
+                  autoComplete="off"
+                  className="w-full rounded-[10px] border border-[var(--line-strong)] bg-[#0d0e0d] px-3.5 py-3 font-mono text-[13.5px] text-[#eef1e9] outline-none transition placeholder:text-white/22 focus:border-neon/55 focus:shadow-[0_0_0_3px_rgba(204,255,0,0.08)]"
+                  {...register('inviteCode')}
+                />
+                {errors.inviteCode && (
+                  <p className="mt-1.5 text-[12px] text-red-400">
+                    {errors.inviteCode.message}
+                  </p>
                 )}
               </div>
 
@@ -150,7 +184,7 @@ export function LoginPage() {
                 disabled={isSubmitting}
                 className="btn-sheen w-full rounded-[10px] bg-neon py-3.5 font-mono text-[13px] font-medium tracking-wide text-[#0a0c06] transition hover:-translate-y-px hover:shadow-[0_4px_24px_-4px_rgba(204,255,0,0.45)] active:translate-y-0 disabled:opacity-50"
               >
-                {isSubmitting ? 'Ingresando…' : 'Ingresar'}
+                {isSubmitting ? 'Creando cuenta…' : 'Registrarme'}
               </button>
             </form>
 
@@ -161,26 +195,14 @@ export function LoginPage() {
             </div>
 
             <Link
-              to="/register"
+              to="/login"
               className="block w-full rounded-[10px] border border-[var(--line-strong)] py-2.5 text-center text-[12.5px] text-white/40 transition hover:border-white/22 hover:text-white"
             >
-              Crear una cuenta
+              Ya tengo cuenta — Iniciar sesión
             </Link>
-
-            <div className="mt-5 text-center text-[10.5px] text-white/22">
-              Protegido con verificación en dos pasos
-            </div>
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function LogoWordmarkTitle() {
-  return (
-    <div className="font-heading text-[19px] font-semibold tracking-tight text-[#f2f4ee]">
-      Crazy<b className="font-semibold text-neon">Support</b>Hub
     </div>
   )
 }
