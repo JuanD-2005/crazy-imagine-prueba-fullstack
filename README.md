@@ -353,9 +353,11 @@ eso es alcanzable por un agente sin acceso a esa UI.
 
 ## Pendientes / bugs conocidos
 
-- El frontend no tiene UI de edición de tickets (`PATCH /tickets/:id`) — el backend lo
-  soporta y está testeado, pero no se priorizó una vista de edición para el alcance de
-  esta entrega.
+- El frontend solo edita `status` desde el detalle del ticket (selector conectado a
+  `PATCH /tickets/:id`). `priority`, `category` y `assignedTo` no tienen UI de edición
+  manual — el backend los soporta y están testeados, pero hoy solo se completan
+  automáticamente vía el enriquecimiento de n8n; no se priorizó una vista de edición
+  manual para esos campos en el alcance de esta entrega.
 - Deploy: no se hizo. La entrega corre localmente vía `docker compose up` (Postgres + n8n
   + backend) más el frontend con `npm run dev` — no hay una versión desplegada en la
   nube.
