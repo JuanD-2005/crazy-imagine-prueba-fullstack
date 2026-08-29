@@ -371,6 +371,22 @@ eso es alcanzable por un agente sin acceso a esa UI.
 - Deploy: no se hizo. La entrega corre localmente vía `docker compose up` (Postgres + n8n
   + backend) más el frontend con `npm run dev` — no hay una versión desplegada en la
   nube.
+- **Condición de carrera entre la reconciliación (Fase 9) y un callback real tardío de
+  n8n**: el cron marca un ticket como `failed` si lleva más de 10 minutos en `processing`
+  (`PROCESSING_TIMEOUT_MS`, `backend/src/webhooks/reconciliation.service.ts:8`). Si el
+  callback real de n8n llega recién después de ese timeout, el backend lo acepta y
+  sobrescribe el ticket a `done` con los datos válidos sin problema — no hay corrupción de
+  datos, Postgres serializa la escritura sobre la fila. El problema es en el frontend: deja
+  de hacer polling en cuanto ve el ticket en `failed` (comportamiento intencional, para no
+  pegarle al backend indefinidamente en un estado terminal), así que si un agente tenía la
+  pantalla de detalle abierta en ese momento, va a seguir viendo "la clasificación falló"
+  hasta que recargue manualmente, aunque la base ya tenga el resultado correcto. Tampoco hay
+  logging que distinga este caso de un `failed` real y definitivo. Con el timeout actual (10
+  min) muy por encima de la latencia observada de Gemini (~1 min), la probabilidad de que
+  esto ocurra en la práctica es baja, pero queda identificado como mejora pendiente: agregar
+  un guard de estado en el callback (no sobrescribir un `failed` sin registrar que fue una
+  resolución tardía) y hacer que el frontend reanude el polling si detecta esta situación al
+  recargar.
 
 ## Seguridad
 
