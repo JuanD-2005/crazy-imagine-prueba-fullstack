@@ -10,8 +10,9 @@ corriendo).
 1. Abrí `http://localhost:5678` y creá tu owner account si es la primera vez.
 2. Menú (☰) → **Import from File**.
 3. Seleccioná `n8n/workflow.json` de este repo.
-4. Se crea el workflow **"CrazySupportHub - Ticket Enrichment"** con 3 nodos:
-   `Webhook` → `Classify Ticket` → `Send Callback`, **inactivo**.
+4. Se crea el workflow **"CrazySupportHub - Ticket Enrichment"** con 5 nodos:
+   `Webhook` → `Classify Ticket` → `Message a model` (Gemini) → `Build AI Reply`
+   → `Send Callback`, **inactivo**.
 
 ## 2. Crear las 2 credenciales "Header Auth"
 
@@ -43,7 +44,28 @@ el de `N8N_WEBHOOK_SECRET` en `backend/.env`.
 > seleccionados en cada nodo. Podés nombrarlas distinto si preferís, mientras
 > el **valor** del header sea el mismo `N8N_WEBHOOK_SECRET` en los dos.
 
-## 3. URL del callback (ya no requiere configuración)
+## 3. Crear la credencial de Google Gemini
+
+El nodo **Message a model** (tipo `@n8n/n8n-nodes-langchain.googleGemini`, modelo
+`gemini-3-flash-preview`) genera `suggestedReply` — necesita su propia credencial,
+distinta de las de `Header Auth`.
+
+1. Conseguí una API key gratis de Gemini en **Google AI Studio**
+   (`https://aistudio.google.com/app/apikey`, con cualquier cuenta de Google) →
+   **Create API key**. El free tier no pide tarjeta, solo tiene límites de
+   cuota/rate por minuto y por día — de sobra para probar este flujo.
+2. Abrí el nodo **Message a model** en el workflow importado.
+3. En el campo de credencial, click **Create New**.
+4. Tipo de credencial a buscar: **Google Gemini(PaLM) Api**.
+5. Pegá la API key del paso 1 en el campo **API Key**.
+6. Guardar.
+
+Si esta credencial falta o la API key es inválida, el nodo tiene configurado
+**"On Error: Continue"** — el workflow no se cuelga, el ticket igual se
+clasifica por keywords (`Classify Ticket`) y solo `suggestedReply` queda sin
+valor (ver README, sección "Uso de IA").
+
+## 4. URL del callback (ya no requiere configuración)
 
 El nodo **Send Callback** apunta al string literal
 `http://backend:3000/webhooks/n8n/enrichment` (el nombre de servicio del
@@ -58,24 +80,25 @@ Si en el futuro se vuelve a usar `$env` (por ejemplo habilitando
 `BACKEND_CALLBACK_URL` definida en el servicio `n8n` por si hace falta
 retomarla.
 
-## 4. Activar el workflow
+## 5. Activar el workflow
 
 Toggle **Active** arriba a la derecha del editor del workflow. Con el
 workflow inactivo, el path `/webhook/ticket-enrichment` no existe todavía y
 el backend recibe 404 al intentar notificar (el ticket igual se crea y queda
 en `pending` — es el comportamiento esperado documentado en el README).
 
-## 5. Probar el flujo completo
+## 6. Probar el flujo completo
 
-1. Creá un ticket vía la API (o el frontend cuando esté listo) autenticado
-   como agent o admin.
+1. Creá un ticket vía la API (o el frontend) autenticado como agent o admin.
 2. El backend dispara el webhook saliente → si n8n respondió 2xx, el ticket
    pasa a `enrichmentStatus: "processing"`.
-3. El nodo `Classify Ticket` clasifica por keywords y el nodo `Send Callback`
-   llama de vuelta a `POST /webhooks/n8n/enrichment`.
+3. El nodo `Classify Ticket` clasifica por keywords, `Message a model` le pide
+   a Gemini una `suggestedReply` (y refina `priority`/`category` si el modelo
+   propone algo válido), `Build AI Reply` arma el payload final y
+   `Send Callback` llama de vuelta a `POST /webhooks/n8n/enrichment`.
 4. El ticket debería terminar en `enrichmentStatus: "done"` con
-   `priority`/`category`/`tags` completados (podés confirmarlo con
-   `GET /tickets/:id`, o revisando la fila en Postgres).
+   `priority`/`category`/`tags`/`suggestedReply` completados (podés
+   confirmarlo con `GET /tickets/:id`, o revisando la fila en Postgres).
 
 Podés seguir la ejecución en n8n desde **Executions** en el menú lateral para
 ver qué datos entraron y salieron de cada nodo.
