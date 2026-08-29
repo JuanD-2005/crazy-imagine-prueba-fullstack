@@ -42,10 +42,12 @@ export function RegisterPage() {
     <div className="grid h-screen grid-cols-1 overflow-hidden md:grid-cols-[1.15fr_1fr]">
       {/* ---------- Panel izquierdo: brand / spotlight grid ---------- */}
       <div
-        className="spotlight-grid spotlight-glow grain-overlay relative hidden flex-col justify-between border-r border-[var(--line)] bg-[#050605] p-14 md:flex"
+        className="spotlight-grid grain-overlay relative hidden flex-col justify-between border-r border-[var(--line)] bg-[#050605] p-14 md:flex"
         onMouseMove={spotlight.onMouseMove}
         style={spotlight.style}
       >
+        <div className="spotlight-glow" />
+
         <div className="pointer-events-none absolute inset-0 z-[1] flex items-center justify-center">
           <LogoMark className="h-[560px] w-[560px] opacity-5" />
         </div>

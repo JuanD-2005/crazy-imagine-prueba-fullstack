@@ -131,20 +131,32 @@ body {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
-  opacity: 0.5;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.4'/%3E%3C/svg%3E");
+  opacity: 0.25;
+  mix-blend-mode: overlay;
+  z-index: 1;
   pointer-events: none;
 }
 
-.spotlight-glow::before {
-  content: '';
+/* Glow que sigue al mouse: es un <div> real, no un ::before, a propósito — el
+   panel ya usa ::before para .spotlight-grid (líneas de grilla + su propia
+   máscara radial). Poner el glow también en ::before pisaba silenciosamente el
+   background-image de la grilla (el shorthand `background` resetea
+   background-image) mientras la máscara radial de .spotlight-grid seguía
+   aplicando sobre el gradiente del glow — dos caídas radiales no lineales
+   superpuestas con el mismo centro, que es lo que se veía como anillos
+   concéntricos. Con su propio elemento no compiten por el mismo pseudo-elemento. */
+.spotlight-glow {
   position: absolute;
-  inset: 0;
+  inset: -15%;
+  z-index: 0;
   background: radial-gradient(
-    600px 600px at var(--mx, 30%) var(--my, 40%),
-    rgba(204, 255, 0, 0.07),
-    transparent 60%
+    650px 650px at var(--mx, 30%) var(--my, 40%),
+    rgba(204, 255, 0, 0.05),
+    rgba(204, 255, 0, 0.015) 45%,
+    transparent 75%
   );
+  filter: blur(110px);
   pointer-events: none;
 }
 
