@@ -72,7 +72,11 @@ El JSON del workflow está en [`n8n/workflow.json`](n8n/workflow.json). Pasos es
 
 1. Abrí `http://localhost:5678` y creá tu owner account si es la primera vez.
 2. Menú → **Import from File** → seleccioná `n8n/workflow.json`.
-3. Creá las 2 credenciales **Header Auth** que te pida (`X-Webhook-Secret`, mismo valor que `N8N_WEBHOOK_SECRET` en `backend/.env`).
+3. Creá **2 credenciales de tipos distintos** que te va a pedir: una **Header Auth**
+   (`X-Webhook-Secret`, mismo valor que `N8N_WEBHOOK_SECRET` en `backend/.env` — la usan
+   tanto el nodo `Webhook` como `Send Callback`) y una **Google Gemini(PaLM) Api** (API key
+   gratis de Google AI Studio, para el nodo `Message a model`). Detalle completo paso a
+   paso de ambas en [`docs/n8n-setup.md`](docs/n8n-setup.md).
 4. Activá el workflow con el toggle **Active**.
 
 Sin este paso, el backend igual funciona: el ticket se crea y el disparo saliente no encuentra el webhook activo, quedando en `enrichmentStatus: pending` en lugar de avanzar. Eso es comportamiento esperado y no un error.
@@ -238,6 +242,16 @@ Se detectaron bugs reales de:
 - path incorrecto del webhook,
 - hardcode del callback versus seguridad de n8n.
 
+El mismo flujo (Claude para revisión, Claude Code para ejecución) se usó también en el
+trabajo posterior al Sprint 1: el nodo de Gemini en n8n, rate limiting en los endpoints de
+auth, el pipeline de CI con Postgres efímero real (no mocks), el registro protegido con
+código de invitación, el selector de estado y el botón de eliminar ticket para admin en el
+frontend.
+
+Historial completo de prompts usados, fase por fase, en
+[`docs/claude-code-prompts.md`](docs/claude-code-prompts.md) — se deja como evidencia de
+proceso, ya que la prueba pide transparencia sobre el uso de IA.
+
 ---
 
 ## 📌 Pendientes / bugs conocidos
@@ -245,7 +259,22 @@ Se detectaron bugs reales de:
 - `priority` y `category` no tienen edición manual en UI por decisión de diseño.
 - `assignedTo` sería una feature de gestión de equipo para el futuro.
 - No hubo deploy: la entrega corre localmente via `docker compose up` + frontend con `npm run dev`.
-- Existe una condición de carrera posible entre reconciliación y callback tardío de n8n, que queda como mejora pendiente.
+- **Condición de carrera entre la reconciliación (Fase 9) y un callback real tardío de
+  n8n**: el cron marca un ticket como `failed` si lleva más de 10 minutos en `processing`
+  (`PROCESSING_TIMEOUT_MS`, `backend/src/webhooks/reconciliation.service.ts:8`). Si el
+  callback real de n8n llega recién después de ese timeout, el backend lo acepta y
+  sobrescribe el ticket a `done` con los datos válidos sin problema — no hay corrupción de
+  datos, Postgres serializa la escritura sobre la fila. El problema es en el frontend: deja
+  de hacer polling en cuanto ve el ticket en `failed` (comportamiento intencional, para no
+  pegarle al backend indefinidamente en un estado terminal), así que si un agente tenía la
+  pantalla de detalle abierta en ese momento, va a seguir viendo "la clasificación falló"
+  hasta que recargue manualmente, aunque la base ya tenga el resultado correcto. Tampoco hay
+  logging que distinga este caso de un `failed` real y definitivo. Con el timeout actual (10
+  min) muy por encima de la latencia observada de Gemini (~1 min), la probabilidad de que
+  esto ocurra en la práctica es baja, pero queda identificado como mejora pendiente: agregar
+  un guard de estado en el callback (no sobrescribir un `failed` sin registrar que fue una
+  resolución tardía) y hacer que el frontend reanude el polling si detecta esta situación al
+  recargar.
 
 ---
 
@@ -254,6 +283,11 @@ Se detectaron bugs reales de:
 - Passwords hasheados con `bcrypt` (cost factor 10).
 - Auth mediante JWT (`@nestjs/jwt` + `passport-jwt`).
 - Registro público asigna `role: agent` y no permite escalar a admin.
+- Rate limiting (`@nestjs/throttler`) en `POST /auth/login` y `POST /auth/register`: 5
+  requests por minuto por IP, `429` al exceder — mitiga fuerza bruta y creación masiva de
+  cuentas.
+- `DELETE /tickets/:id` reservado al rol `admin` (`@Roles('admin')` en el controller) — es
+  una acción irreversible, ningún `agent` puede ejecutarla aunque conozca el id.
 - Callback de n8n protegido por secreto compartido (`X-Webhook-Secret`).
 - CORS restringido a un origin específico (`CORS_ORIGIN`).
 - Validación de entrada con DTOs + `class-validator`.
@@ -271,5 +305,3 @@ CrazySupportHub combina:
 - IA para respuesta sugerida,
 - frontend ligero y reactivo,
 - seguridad y validación en cada capa.
-
-Si querés, puedo dejarte una segunda versión aún más premium: más tipo landing page, más minimalista o más orientada a portfolio/cliente técnico.
