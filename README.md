@@ -247,6 +247,22 @@ que un admin cree cuentas por API sin necesitar una pantalla dedicada — y no r
 riesgo porque el DTO fuerza `role: agent` siempre; no hay forma de crear un admin por ahí
 (ver Seguridad).
 
+### Registro protegido con código de invitación
+
+`POST /auth/register` requiere un `inviteCode` que debe coincidir con la variable de
+entorno `INVITE_CODE` (`backend/src/auth/auth.service.ts`) — si no coincide, `403` antes
+de tocar la base. Se eligió un código compartido simple en vez de whitelisting por dominio
+de email o aprobación manual de un admin: no depende de que exista un dominio corporativo
+real (esto es una prueba técnica, no una empresa con `@empresa.com`), y es trivial de
+rotar si el código se filtra — alcanza con cambiar la variable de entorno, sin tocar código
+ni re-invitar usuarios uno por uno.
+
+El chequeo del código corre **antes** que la verificación de email duplicado: si se
+validara después, alguien con un código incorrecto pero un email que ya existe recibiría
+un `409` en vez de `403`, filtrando por el orden de los errores que esa cuenta ya está
+registrada. Verificando el código primero, un intento sin la invitación correcta siempre
+da `403`, sin importar si el email ya existe o no.
+
 ### Scoping de status: mismo criterio en frontend y backend
 
 El selector de estado en el detalle del ticket (`frontend/src/pages/TicketDetailPage.tsx`)
