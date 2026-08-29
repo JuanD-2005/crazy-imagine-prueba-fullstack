@@ -5,34 +5,37 @@
       "parameters": {
         "httpMethod": "POST",
         "path": "ticket-enrichment",
-        "responseMode": "onReceived",
         "authentication": "headerAuth",
         "options": {}
       },
-      "id": "1f6f4b2a-0001-4a00-9c00-000000000001",
+      "id": "e368cfc4-b628-4e0b-80aa-58d6a6374b5e",
       "name": "Webhook",
       "type": "n8n-nodes-base.webhook",
       "typeVersion": 2,
-      "position": [240, 300],
+      "position": [
+        -192,
+        0
+      ],
       "webhookId": "ticket-enrichment",
       "credentials": {
         "httpHeaderAuth": {
-          "id": "incoming-webhook-secret",
-          "name": "Webhook Secret (incoming)"
+          "id": "o9SWoKM0W4X585zk",
+          "name": "Header Auth account"
         }
       }
     },
     {
       "parameters": {
-        "mode": "runOnceForAllItems",
-        "language": "javaScript",
         "jsCode": "// ticketId se extrae una sola vez, fuera del try: si el payload no trae\n// ticketId no hay nada que reportar de vuelta, y así el catch nunca depende\n// de volver a tocar $input (que ya funcionó una vez arriba).\nconst rawBody = ($input.first().json && $input.first().json.body) || $input.first().json || {};\nconst ticketId = rawBody.ticketId;\n\ntry {\n  const title = String(rawBody.title || '').toLowerCase();\n  const description = String(rawBody.description || '').toLowerCase();\n  const text = `${title} ${description}`;\n\n  // Reglas de clasificación por keywords, en orden de prioridad de match.\n  const categoryRules = [\n    { category: 'billing', keywords: ['factura', 'cobro', 'pago', 'suscripción', 'cancelación', 'reembolso'] },\n    { category: 'technical', keywords: ['error', 'bug', 'no funciona', 'se cierra', 'crash', 'no carga', '500'] },\n    { category: 'account', keywords: ['contraseña', 'email', 'cuenta', 'acceso', 'sesión', 'login'] },\n  ];\n\n  const priorityRules = [\n    { priority: 'urgent', keywords: ['urgente', 'no puedo trabajar', 'crítico'] },\n    { priority: 'high', keywords: ['error 500', 'cobro duplicado', 'no funciona', 'no puedo iniciar sesión'] },\n    { priority: 'low', keywords: ['sugerencia', 'consulta', 'pregunta'] },\n  ];\n\n  const tags = [];\n\n  let category = 'other';\n  for (const rule of categoryRules) {\n    const hit = rule.keywords.find((kw) => text.includes(kw));\n    if (hit) {\n      category = rule.category;\n      tags.push(hit);\n      break;\n    }\n  }\n\n  let priority = 'medium';\n  for (const rule of priorityRules) {\n    const hit = rule.keywords.find((kw) => text.includes(kw));\n    if (hit) {\n      priority = rule.priority;\n      tags.push(hit);\n      break;\n    }\n  }\n\n  return [{ json: { ticketId, status: 'done', priority, category, tags } }];\n} catch (error) {\n  return [{ json: { ticketId, status: 'failed' } }];\n}"
       },
-      "id": "1f6f4b2a-0002-4a00-9c00-000000000002",
+      "id": "e2dc4607-b477-44be-9724-db6794fdda34",
       "name": "Classify Ticket",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 300]
+      "position": [
+        -16,
+        0
+      ]
     },
     {
       "parameters": {
@@ -45,30 +48,128 @@
         "jsonBody": "={{ $json }}",
         "options": {}
       },
-      "id": "1f6f4b2a-0003-4a00-9c00-000000000003",
+      "id": "93cea8fb-0b5a-4a51-a790-448c0ce1bde0",
       "name": "Send Callback",
       "type": "n8n-nodes-base.httpRequest",
       "typeVersion": 4.2,
-      "position": [680, 300],
+      "position": [
+        800,
+        0
+      ],
       "credentials": {
         "httpHeaderAuth": {
-          "id": "outgoing-webhook-secret",
-          "name": "Webhook Secret (outgoing)"
+          "id": "o9SWoKM0W4X585zk",
+          "name": "Header Auth account"
         }
       }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3-flash-preview",
+          "mode": "list",
+          "cachedResultName": "models/gemini-3-flash-preview"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Eres el asistente de clasificación y redacción de respuestas de CrazySupportHub, una mesa de ayuda de soporte técnico. Vas a recibir el título y la descripción de un ticket de soporte creado por un cliente.\n\nTu tarea es devolver EXCLUSIVAMENTE un objeto JSON válido, sin texto adicional, sin explicaciones, sin bloques de código markdown (nada de ```), con esta forma exacta:\n\n{\n  \"suggestedReply\": string,\n  \"priority\": \"low\" | \"medium\" | \"high\" | \"urgent\",\n  \"category\": \"billing\" | \"technical\" | \"account\" | \"other\"\n}\n\nReglas:\n- \"suggestedReply\": una respuesta breve (2 a 4 oraciones), profesional, empática y en español neutro, que un agente humano podría enviar casi tal cual al cliente. No inventes datos concretos (números de ticket, fechas, montos) que no estén en la descripción. Si falta información para dar una solución, la respuesta debe pedir esa información de forma cortés.\n- \"priority\": elegí exactamente uno de los 4 valores listados, según el impacto y la urgencia reales descritos por el cliente (ej. \"no puedo trabajar\", pérdida de dinero, o un servicio caído = urgent/high; una duda o sugerencia = low).\n- \"category\": elegí exactamente uno de los 4 valores listados. Usá \"other\" solo si ninguna de las otras tres aplica claramente.\n- Nunca devuelvas un valor fuera de las listas exactas de arriba. Nunca agregues campos extra ni comentarios.\n\nTítulo del ticket: {{ $('Webhook').item.json.body.title }}\n\nDescripción del ticket: {{ $('Webhook').item.json.body.description }}"
+            }
+          ]
+        },
+        "jsonOutput": true,
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        272,
+        0
+      ],
+      "id": "b548c925-f73c-4e84-9de8-844e745d2d44",
+      "name": "Message a model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "jHV7FihD7VnrNGU5",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Nodo Code \"Build AI Reply\" — corre después del nodo de Gemini.\nconst VALID_PRIORITIES = ['low', 'medium', 'high', 'urgent'];\nconst VALID_CATEGORIES = ['billing', 'technical', 'account', 'other'];\n\nconst webhookBody = $('Webhook').item.json.body || {};\nconst ticketId = webhookBody.ticketId;\n\nconst classified = $('Classify Ticket').item.json;\nconst fallbackPriority = classified.priority;\nconst fallbackCategory = classified.category;\nconst tags = classified.tags || [];\n\n// AJUSTADO: la forma real que devuelve este nodo de Gemini.\nconst rawText =\n  $json.content?.parts?.[0]?.text ??\n  $json.candidates?.[0]?.content?.parts?.[0]?.text ??\n  $json.text ??\n  '';\n\nfunction extractJson(text) {\n  const withoutFences = text.replace(/```json\\s*|```/g, '').trim();\n  try {\n    return JSON.parse(withoutFences);\n  } catch {\n    const match = withoutFences.match(/\\{[\\s\\S]*\\}/);\n    if (!match) return null;\n    try {\n      return JSON.parse(match[0]);\n    } catch {\n      return null;\n    }\n  }\n}\n\nconst parsed = extractJson(rawText);\n\nconst priority =\n  parsed && VALID_PRIORITIES.includes(parsed.priority) ? parsed.priority : fallbackPriority;\n\nconst category =\n  parsed && VALID_CATEGORIES.includes(parsed.category) ? parsed.category : fallbackCategory;\n\nconst suggestedReply =\n  parsed && typeof parsed.suggestedReply === 'string' && parsed.suggestedReply.trim().length > 0\n    ? parsed.suggestedReply.trim()\n    : undefined;\n\nconst result = { ticketId, status: 'done', priority, category, tags };\nif (suggestedReply) {\n  result.suggestedReply = suggestedReply;\n}\n\nreturn [{ json: result }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "57c2a59e-31c5-4f08-9876-696d16c3e1cf",
+      "name": "Build AI Reply"
     }
   ],
+  "pinData": {},
   "connections": {
     "Webhook": {
-      "main": [[{ "node": "Classify Ticket", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Classify Ticket",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
     "Classify Ticket": {
-      "main": [[{ "node": "Send Callback", "type": "main", "index": 0 }]]
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Build AI Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build AI Reply": {
+      "main": [
+        [
+          {
+            "node": "Send Callback",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
-  "active": false,
+  "active": true,
   "settings": {
-    "executionOrder": "v1"
+    "executionOrder": "v1",
+    "binaryMode": "separate"
   },
-  "pinData": {}
+  "versionId": "b1875126-5c5e-4958-9c1f-06ef7580243f",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "fefde558c9357be807dd7394353687bfad7bf45cd81dc09bf3d045361ec7b9a8"
+  },
+  "nodeGroups": [],
+  "id": "98i5kcvsMzMhwgfp",
+  "tags": []
 }
