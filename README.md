@@ -234,19 +234,6 @@ backend indefinidamente después de que el dato ya no cambia. TanStack Query tam
 pausa el polling automáticamente cuando la pestaña del navegador no está visible
 (comportamiento por defecto, no algo que se implementó a mano).
 
-### Registro deshabilitado en el frontend (decisión consciente)
-
-`POST /auth/register` existe y funciona en el backend (probado con su propio test e2e),
-pero el frontend no expone ningún camino para llegar a él — `LoginPage` reemplaza el link
-típico de "Crear una cuenta" por un texto informativo ("Registro deshabilitado — pedile
-una cuenta a un admin"). No es un endpoint a medio conectar ni una feature que falta:
-CrazySupportHub es una herramienta interna, no un producto de auto-registro público, así
-que las cuentas las crea un admin, no el propio usuario. Dejar el endpoint activo en el
-backend sin exponerlo en el frontend es intencional — sirve para pruebas, scripts, o para
-que un admin cree cuentas por API sin necesitar una pantalla dedicada — y no representa un
-riesgo porque el DTO fuerza `role: agent` siempre; no hay forma de crear un admin por ahí
-(ver Seguridad).
-
 ### Registro protegido con código de invitación
 
 `POST /auth/register` requiere un `inviteCode` que debe coincidir con la variable de
