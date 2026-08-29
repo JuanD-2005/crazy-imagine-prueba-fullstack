@@ -78,10 +78,10 @@ export function LoginPage() {
       </div>
 
       {/* ---------- Panel derecho: login card ---------- */}
-      <div className="relative flex items-center justify-center bg-bg">
+      <div className="grain-overlay relative flex items-center justify-center bg-bg">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(500px_400px_at_50%_20%,rgba(204,255,0,0.035),transparent_65%)]" />
 
-        <div className="card-border w-[400px] max-w-[90vw]">
+        <div className="card-border relative z-[2] w-[400px] max-w-[90vw]">
           <div className="relative rounded-[19px] border border-white/[0.04] bg-[#08090a] px-9 py-10">
             <div className="mb-7 flex flex-col items-center">
               <div className="relative mb-4 flex h-20 w-20 items-center justify-center rounded-xl border border-[var(--line-strong)] bg-[linear-gradient(160deg,#101210,#050605)] shadow-[0_0_20px_rgba(204,255,0,0.3)]">
