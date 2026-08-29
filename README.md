@@ -1,11 +1,23 @@
 # CrazySupportHub
 
 <p align="center">
-  <img alt="CrazySupportHub" src="https://img.shields.io/badge/CrazySupportHub-Tickets%20%26%20Automation-3b82f6?style=for-the-badge&logo=githubactions" />
+  <img alt="CI" src="https://github.com/JuanD-2005/crazy-imagine-prueba-fullstack/actions/workflows/ci.yml/badge.svg" />
 </p>
 
 > Herramienta interna de tickets de soporte con enriquecimiento automático de prioridad,
 > categoría, tags y respuesta sugerida, disparado por un workflow de n8n al crear cada ticket.
+
+## 📑 Índice
+
+- [✨ Visión general](#-visión-general)
+- [🎬 Demo](#-demo)
+- [🚀 Setup](#-setup)
+- [🧪 Tests](#-tests)
+- [🧠 Decisiones técnicas](#-decisiones-técnicas)
+- [🤖 Uso de IA](#-uso-de-ia)
+- [📌 Pendientes / bugs conocidos](#-pendientes--bugs-conocidos)
+- [🔐 Seguridad](#-seguridad)
+- [🧾 En resumen](#-en-resumen)
 
 ## ✨ Visión general
 
@@ -184,9 +196,12 @@ Esto evita que tickets queden “colgados” sin que nadie lo detecte.
 
 El backend y n8n se resolvieron por nombre de servicio (`backend` / `n8n`) en vez de depender de `host.docker.internal`, que no es portable entre sistemas. El frontend se dejó fuera de Docker para evitar complejidad extra durante desarrollo.
 
-### Callback de n8n y hardcode deliberado
+<details>
+<summary><strong>Callback de n8n y hardcode deliberado</strong></summary>
 
 La URL del callback se hardcodeó en el nodo de n8n porque `BACKEND_CALLBACK_URL` no resolvía bien con esta instancia de n8n por `N8N_BLOCK_ENV_ACCESS_IN_NODE`. Como no es un secreto, se eligió hardcodear el nombre interno del servicio `http://backend:3000/webhooks/n8n/enrichment` y dejando el secreto real (`X-Webhook-Secret`) en la credencial `Header Auth`.
+
+</details>
 
 ### Estado asíncrono en el frontend
 
@@ -211,7 +226,8 @@ Esto evita que el registro público se convierta en una puerta abierta y deja un
 
 El selector de estado del detalle usa la misma regla que el backend: admin sin restricción; agent solo si es `createdBy` o `assignedTo` del ticket. La duplicación aquí es una defensa en profundidad: el backend sigue siendo la fuente de verdad.
 
-### La historia real del fix de `nest --watch` en Docker
+<details>
+<summary><strong>La historia real del fix de <code>nest --watch</code> en Docker</strong></summary>
 
 El problema no estaba en Chokidar ni en bind mounts; era el ciclo de vida del proceso de `@nestjs/cli`: al reiniciar, el proceso padre quedaba vivo con el puerto 3000 ocupado y sirviendo código viejo en silencio. La solución final fue:
 
@@ -219,6 +235,8 @@ El problema no estaba en Chokidar ni en bind mounts; era el ciclo de vida del pr
 - `nodemon` observando `dist/**/*.js` con `--delay 300ms`
 
 Esto preserva los metadatos de decoradores y evita el conflicto del puerto durante el hot reload.
+
+</details>
 
 ---
 
