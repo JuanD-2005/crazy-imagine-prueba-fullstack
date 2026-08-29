@@ -1,10 +1,18 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link, useParams } from 'react-router-dom'
 import { CategoryBadge, PriorityBadge, StatusBadge, Tag } from '../components/Badge'
+import { useAuth } from '../features/auth/useAuth'
 import { ApiError, apiRequest } from '../lib/api-client'
-import type { Ticket } from '../types'
+import type { Ticket, TicketStatus } from '../types'
 
 const POLLING_STATUSES = new Set(['pending', 'processing'])
+
+const STATUS_OPTIONS: { value: TicketStatus; label: string }[] = [
+  { value: 'open', label: 'Abierto' },
+  { value: 'in_progress', label: 'En progreso' },
+  { value: 'resolved', label: 'Resuelto' },
+  { value: 'closed', label: 'Cerrado' },
+]
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleString('es-VE', {
@@ -13,8 +21,44 @@ function formatDate(iso: string) {
   })
 }
 
+function StatusSelect({
+  value,
+  onChange,
+  disabled,
+}: {
+  value: TicketStatus
+  onChange: (value: TicketStatus) => void
+  disabled: boolean
+}) {
+  return (
+    <div className="relative">
+      <select
+        value={value}
+        disabled={disabled}
+        onChange={(event) => onChange(event.target.value as TicketStatus)}
+        className="appearance-none rounded-md border border-(--line-strong) bg-[#08090a] py-1 pr-6 pl-2.5 text-[10.5px] tracking-wide text-(--muted) transition hover:border-white/20 hover:text-[#eee] disabled:cursor-wait disabled:opacity-50"
+      >
+        {STATUS_OPTIONS.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+      <svg
+        viewBox="0 0 10 6"
+        fill="none"
+        className="pointer-events-none absolute top-1/2 right-2 h-1.5 w-2.5 -translate-y-1/2 text-(--muted-dim)"
+      >
+        <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      </svg>
+    </div>
+  )
+}
+
 export function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const { user } = useAuth()
+  const queryClient = useQueryClient()
 
   const query = useQuery({
     queryKey: ['ticket', id],
@@ -24,6 +68,21 @@ export function TicketDetailPage() {
       return enrichmentStatus && POLLING_STATUSES.has(enrichmentStatus) ? 3000 : false
     },
   })
+
+  const updateStatus = useMutation({
+    mutationFn: (status: TicketStatus) =>
+      apiRequest<Ticket>(`/tickets/${id}`, { method: 'PATCH', body: { status } }),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['ticket', id], updated)
+    },
+  })
+
+  const canEditStatus =
+    !!user &&
+    !!query.data &&
+    (user.role === 'admin' ||
+      query.data.createdById === user.id ||
+      query.data.assignedToId === user.id)
 
   return (
     <div className="mx-auto max-w-[680px]">
@@ -76,11 +135,34 @@ export function TicketDetailPage() {
             </span>
           </div>
 
-          <div className="mb-7 flex gap-1.5">
-            <StatusBadge status={query.data.status} />
+          <div className="mb-2 flex items-center gap-1.5">
+            {canEditStatus ? (
+              <StatusSelect
+                value={query.data.status}
+                disabled={updateStatus.isPending}
+                onChange={(status) => updateStatus.mutate(status)}
+              />
+            ) : (
+              <StatusBadge status={query.data.status} />
+            )}
             <PriorityBadge priority={query.data.priority} />
             <CategoryBadge category={query.data.category} />
+            {updateStatus.isPending && (
+              <span className="text-[11px] text-(--muted-dim)">Guardando…</span>
+            )}
           </div>
+
+          {updateStatus.isError && (
+            <p className="mb-3 text-[12px] text-red-300">
+              {updateStatus.error instanceof ApiError
+                ? updateStatus.error.status === 403
+                  ? 'No tenés permiso para cambiar el estado de este ticket.'
+                  : updateStatus.error.message
+                : 'No se pudo actualizar el estado. Intentá de nuevo.'}
+            </p>
+          )}
+
+          <div className="mb-5" />
 
           <div className="mb-3.5 rounded-[14px] border border-(--line) bg-panel px-6 py-5.5">
             <div className="mb-3 text-[10.5px] tracking-wide text-(--muted-dim) uppercase">
