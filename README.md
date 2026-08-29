@@ -193,6 +193,13 @@ ambos casos:
 Tests unitarios en `reconciliation.service.spec.ts` cubren los 3 casos con tiempo
 mockeado (`vi.useFakeTimers`/`vi.setSystemTime`), sin esperar minutos reales.
 
+### CI en GitHub Actions
+
+`.github/workflows/ci.yml` corre en cada push a `master` contra un Postgres **efímero real**
+(`services: postgres:16` con healthcheck, no un mock) — la suite completa: unit tests,
+`prisma migrate deploy` + seed, y los 30 tests e2e (Supertest contra una base real, no solo
+lint con mocks). Confirmado en verde en el repo (run #3, commit `d3041ca`, ~1m3s).
+
 ### Backend en el mismo docker-compose que n8n
 
 Hasta la Fase 4 el backend corría en el host (`npm run start:dev`) apuntando a n8n vía
