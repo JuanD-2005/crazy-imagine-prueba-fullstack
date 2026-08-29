@@ -85,7 +85,7 @@ El JSON del workflow está en [`n8n/workflow.json`](n8n/workflow.json). Pasos es
 1. Abrí `http://localhost:5678` y creá tu owner account si es la primera vez.
 2. Menú → **Import from File** → seleccioná `n8n/workflow.json`.
 3. Creá **2 credenciales de tipos distintos** que te va a pedir: una **Header Auth**
-   (`X-Webhook-Secret`, mismo valor que `N8N_WEBHOOK_SECRET` en `backend/.env` — la usan
+   (`X-Webhook-Secret`, mismo valor que `N8N_WEBHOOK_SECRET` en `backend/.env`. La usan
    tanto el nodo `Webhook` como `Send Callback`) y una **Google Gemini(PaLM) Api** (API key
    gratis de Google AI Studio, para el nodo `Message a model`). Detalle completo paso a
    paso de ambas en [`docs/n8n-setup.md`](docs/n8n-setup.md).
@@ -267,7 +267,7 @@ código de invitación, el selector de estado y el botón de eliminar ticket par
 frontend.
 
 Historial completo de prompts usados, fase por fase, en
-[`docs/claude-code-prompts.md`](docs/claude-code-prompts.md) — se deja como evidencia de
+[`docs/claude-code-prompts.md`](docs/claude-code-prompts.md). Se deja como evidencia de
 proceso, ya que la prueba pide transparencia sobre el uso de IA.
 
 ---
@@ -281,7 +281,7 @@ proceso, ya que la prueba pide transparencia sobre el uso de IA.
   n8n**: el cron marca un ticket como `failed` si lleva más de 10 minutos en `processing`
   (`PROCESSING_TIMEOUT_MS`, `backend/src/webhooks/reconciliation.service.ts:8`). Si el
   callback real de n8n llega recién después de ese timeout, el backend lo acepta y
-  sobrescribe el ticket a `done` con los datos válidos sin problema — no hay corrupción de
+  sobrescribe el ticket a `done` con los datos válidos sin problema. No hay corrupción de
   datos, Postgres serializa la escritura sobre la fila. El problema es en el frontend: deja
   de hacer polling en cuanto ve el ticket en `failed` (comportamiento intencional, para no
   pegarle al backend indefinidamente en un estado terminal), así que si un agente tenía la
@@ -302,10 +302,10 @@ proceso, ya que la prueba pide transparencia sobre el uso de IA.
 - Auth mediante JWT (`@nestjs/jwt` + `passport-jwt`).
 - Registro público asigna `role: agent` y no permite escalar a admin.
 - Rate limiting (`@nestjs/throttler`) en `POST /auth/login` y `POST /auth/register`: 5
-  requests por minuto por IP, `429` al exceder — mitiga fuerza bruta y creación masiva de
+  requests por minuto por IP, `429` al exceder. Mitiga fuerza bruta y creación masiva de
   cuentas.
-- `DELETE /tickets/:id` reservado al rol `admin` (`@Roles('admin')` en el controller) — es
-  una acción irreversible, ningún `agent` puede ejecutarla aunque conozca el id.
+- `DELETE /tickets/:id` reservado al rol `admin` (`@Roles('admin')` en el controller). Es
+  una acción irreversible: ningún `agent` puede ejecutarla aunque conozca el id.
 - Callback de n8n protegido por secreto compartido (`X-Webhook-Secret`).
 - CORS restringido a un origin específico (`CORS_ORIGIN`).
 - Validación de entrada con DTOs + `class-validator`.
