@@ -46,10 +46,15 @@ describe('Auth (e2e)', () => {
     await app.close();
   });
 
-  it('POST /auth/register creates a new agent user', async () => {
+  it('POST /auth/register with the correct invite code creates a new agent user', async () => {
     const response = await request(app.getHttpServer())
       .post('/auth/register')
-      .send({ name: 'Test User', email: testEmail, password: testPassword })
+      .send({
+        name: 'Test User',
+        email: testEmail,
+        password: testPassword,
+        inviteCode: process.env.INVITE_CODE,
+      })
       .expect(201);
 
     const body = response.body as RegisterResponseBody;
@@ -61,6 +66,29 @@ describe('Auth (e2e)', () => {
     expect(body.passwordHash).toBeUndefined();
   });
 
+  it('POST /auth/register without an invite code returns 403', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        name: 'Sin Código',
+        email: `sin-codigo.${Date.now()}@crazysupporthub.test`,
+        password: testPassword,
+      })
+      .expect(403);
+  });
+
+  it('POST /auth/register with an incorrect invite code returns 403', async () => {
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        name: 'Código Incorrecto',
+        email: `codigo-incorrecto.${Date.now()}@crazysupporthub.test`,
+        password: testPassword,
+        inviteCode: 'not-the-real-invite-code',
+      })
+      .expect(403);
+  });
+
   it('POST /auth/register with duplicate email returns 409', async () => {
     await request(app.getHttpServer())
       .post('/auth/register')
@@ -68,6 +96,7 @@ describe('Auth (e2e)', () => {
         name: 'Test User Again',
         email: testEmail,
         password: testPassword,
+        inviteCode: process.env.INVITE_CODE,
       })
       .expect(409);
   });

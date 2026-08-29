@@ -1,7 +1,7 @@
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { LogoMark } from '../components/Logo'
 import { loginSchema, type LoginFormValues } from '../features/auth/schemas'
 import { useAuth } from '../features/auth/useAuth'
@@ -13,6 +13,7 @@ export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
   const [formError, setFormError] = useState<string | null>(null)
+  const registered = (location.state as { registered?: boolean } | null)?.registered
   const spotlight = useMouseSpotlight('percent')
 
   const {
@@ -93,6 +94,12 @@ export function LoginPage() {
               </div>
             </div>
 
+            {registered && (
+              <p className="mb-4 rounded-md border border-neon/20 bg-neon/8 px-3 py-2 text-center text-[12.5px] text-neon">
+                Cuenta creada. Iniciá sesión para continuar.
+              </p>
+            )}
+
             <form onSubmit={handleSubmit(onSubmit)} noValidate className="space-y-4">
               <div>
                 <label
@@ -153,9 +160,12 @@ export function LoginPage() {
               <div className="h-px flex-1 bg-[var(--line)]" />
             </div>
 
-            <p className="w-full rounded-[10px] border border-[var(--line-strong)] py-2.5 text-center text-[12.5px] text-white/40">
-              Registro deshabilitado — pedile una cuenta a un admin
-            </p>
+            <Link
+              to="/register"
+              className="block w-full rounded-[10px] border border-[var(--line-strong)] py-2.5 text-center text-[12.5px] text-white/40 transition hover:border-white/22 hover:text-white"
+            >
+              Crear una cuenta
+            </Link>
 
             <div className="mt-5 text-center text-[10.5px] text-white/22">
               Protegido con verificación en dos pasos
